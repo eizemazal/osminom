@@ -1,6 +1,6 @@
-from osminom.smiles_parser import SmilesParser as SP
+from osminom.ast import Ast, AstNode
 from osminom.atom import Atom
-from osminom.ast import AstNode, Ast
+from osminom.smiles_parser import SmilesParser as SP
 
 # import pytest
 
@@ -78,3 +78,25 @@ def test_traverse():
     assert [node.atom.symbol for node in mol.root.traverse()] == list("ONC")
     mol = SP().parse("C1CCC1")
     assert [node.atom.symbol for node in mol.root.traverse()] == list("CCCC")
+
+
+def traverse(node: AstNode, indent=0):
+    print(" " * indent, node.upbond, node.atom.symbol, sep="")
+    for child in node.children:
+        traverse(child, indent + 2)
+
+
+def test_chiral():
+    """fix [C@H]"""
+    parser = SP(debug=True)
+    mol = parser.parse("N[C@H]")
+
+    traverse(mol.root)
+
+
+def test_mulbond_subchain():
+    """fix C(=O)"""
+    parser = SP()
+    mol = parser.parse("C(=O)")
+
+    traverse(mol.root)

@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 import ply.yacc as yacc
-from osminom.smiles_lexer import SmilesLexer
-from osminom.atom import Atom
+
 from osminom.ast import Ast
+from osminom.atom import Atom
+from osminom.smiles_lexer import SmilesLexer
 
 
 class SmilesParser:
-
     tokens = SmilesLexer.tokens
 
     def p_smiles(self, p):
@@ -31,7 +32,7 @@ class SmilesParser:
 
     def p_chain_brackets_multiple(self, p):
         """chain : chain '(' MULBOND chain ')'"""
-        p[0] = p[1].append(p[4], p[3])
+        p[0] = p[1].append(p[4], None, p[3])
 
     def p_chain_brackets_multiple_stereo(self, p):
         """chain : SLASH atom '(' MULBOND atom SLASH chain ')'"""
@@ -78,7 +79,7 @@ class SmilesParser:
     def p_atom_protonated(self, p):
         """atom : '[' atom 'H' ']'"""
         p[0] = p[2]
-        p[0].protonation += 1
+        p[0].nprotons = (p[0].nprotons or 0) + 1
 
     def p_error(self, p):
         raise ValueError("Syntax error")
