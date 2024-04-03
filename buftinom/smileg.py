@@ -104,7 +104,9 @@ class Molecule:
 
     def push_bond(self, bond: Bond):
         if self._staged_bond is not None:
-            raise ValueError(f"Bond `{self._staged_bond}` already staged")
+            raise ValueError(
+                f"Invalid syntax: multiple bonds `{self._staged_bond}, {bond}`"
+            )
 
         self._staged_bond = bond
         return self

@@ -88,17 +88,6 @@ class SmilesParser:
         """atom_open : ELEM"""
         p[0] = Atom(symbol=p[1])
 
-    # def p_atom_parametrized(self, p: tuple[None, str, int, str, int, int, str]):
-    #     """atom_parametrized : LBRACE isotope ELEM chirality hydrogen charge RBRACE"""
-    #     _, _, isotope, elem, chirality, hydrogen, charge, _ = p
-    #     p[0] = Atom(
-    #         symbol=elem,
-    #         isotope=isotope,
-    #         nhydrogen=hydrogen,
-    #         charge=charge,
-    #         chirality=chirality,
-    #     )
-
     def p_atom_parametrized(self, p: tuple[None, str, int, str, int, int, str]):
         """atom_parametrized : LBRACE isotope ELEM chirality hydrogen charge RBRACE"""
         _, _, isotope, elem, chirality, hydrogen, charge, _ = p
