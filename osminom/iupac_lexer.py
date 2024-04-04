@@ -5,6 +5,10 @@ from copy import deepcopy
 
 
 aliphatic_roots = ["мет", "эт", "проп", "бут", "пент", "гекс", "гепт", "окт", "нон"]
+
+# This will need to be refactored to support compound numbers
+numeric_prefixes = ["моно", "ди", "три", "тетра", "пента", "гекса", "гепта", "окта", "нона", "дека", "ундека", "додека"]
+
 chains = {
     root: SP().parse("C" * (idx + 1)).label(range(1, idx + 2))
     for idx, root in enumerate(aliphatic_roots)
@@ -18,9 +22,10 @@ class IupacLexer:
         "SUFFIX",
         "TBASE",
         "PRFXFORM",
+        "NUMPRFXFORM",
         "TRADICAL",
         # "SUFXFORM",
-        # "COMMA",
+        "COMMA",
         "DASH",
         "YL",
         "CYCLO",
@@ -35,6 +40,11 @@ class IupacLexer:
         return t
 
     t_ALIPHATIC.__doc__ = "|".join(aliphatic_roots)
+
+    def t_NUMPRFXFORM(self, t):
+        return t
+
+    t_NUMPRFXFORM.__doc__ = "|".join(numeric_prefixes)
 
     def t_SUFFIX(self, t):
         r"(анол|анамин|ан|ен|ин|аль)"
