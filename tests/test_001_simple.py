@@ -118,7 +118,7 @@ def test_multiprefixes(parser):
     mol = parser.parse("5,5-диэтилциклогексан")
     assert mol.smiles == "CCC(CC)(C1)CCCC1"
 
-    mol = parser.parse("1-(2,2-(2,4-гидроксифенил)винил)этанол")
+    mol = parser.parse("1-(2,2-ди(2,4-дигидроксифенил)винил)этанол")
     assert mol.smiles == "Oc(c1)cc(O)cc1C(=C)(C(O)C)c1cc(O)cc(c1)O"
 
 # def test_suffixes(parser):
