@@ -2,7 +2,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from buftinom.smileg import Bond, BondType, Molecule
+from buftinom.smileg import Bond, BondType, MoleculeConstructor
 from buftinom.smiles_lexer import SmilesLexer
 from buftinom.smiles_parser import SmilesParser
 from tests import test_data
@@ -52,7 +52,7 @@ def test_many_molecules(parser):
     assert len(parser.parse("C.C")) == 2
 
 
-def bond_values(mol: Molecule):
+def bond_values(mol: MoleculeConstructor):
     return [b for _, b, _ in mol.unuque_bonds()]
 
 

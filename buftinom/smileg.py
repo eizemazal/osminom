@@ -3,8 +3,9 @@ from enum import Enum
 from typing import Literal
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class Atom:
+    id: int
     symbol: str
     isotope: int | None = None
     chirality: str | None = None
@@ -16,11 +17,14 @@ class Atom:
             self.isotope is not None
             or self.hydrogen is not None
             or self.chirality is not None
+            or self.charge != 0
         ):
             isotope = f"{self.isotope}" if self.isotope else ""
             chirality = f"@{self.chirality}" if self.chirality else ""
             hydrogens = f"H{self.hydrogen}" if self.hydrogen else ""
             charge = f"{self.charge:+}" if self.charge else ""
+            if self.charge and abs(self.charge) == 1:
+                charge = charge.replace("1", "")
             return f"[{isotope}{self.symbol}{chirality}{hydrogens}{charge}]"
 
         return self.symbol
@@ -28,10 +32,13 @@ class Atom:
     __repr__ = __str__
 
     def __hash__(self):
-        return id(self)
+        return id(self.id)
 
     def __eq__(self, other):
-        return self is other
+        return self.id == other.id
+
+    def __lt__(self, other):
+        return self.id < other.id
 
 
 class BondType(Enum):
@@ -69,6 +76,23 @@ class Molecule:
         self._staged_bond: Bond | None = None
         self._bonds: dict[tuple[Atom, Atom] : Bond] = {}
         self._closures: dict[str : tuple[Bond, Atom]] = {}
+
+    @property
+    def bonds(self) -> dict[tuple[Atom, Atom], Bond]:
+        return self._bonds
+
+    @property
+    def atoms(self) -> list[Atom]:
+        return self._atoms
+
+    def atom(self, symbol: str):
+        """find first atom by symbol, for test purposes"""
+        return [a for a in self._atoms if a.symbol == symbol][0]
+
+
+class MoleculeConstructor(Molecule):
+    def __init__(self):
+        super().__init__()
         self.connect_bond = Bond.make("-")
 
     def add_atom(self, atom: Atom):
@@ -111,7 +135,7 @@ class Molecule:
         self._staged_bond = bond
         return self
 
-    def merge(self, other: "Molecule"):
+    def merge(self, other: "MoleculeConstructor"):
         other.print_table()
         cbond = self._pop_bond()
         incoming_bond = other.connect_bond
@@ -157,10 +181,6 @@ class Molecule:
         self._bonds[(atom1, atom2)] = bond
         self._bonds[(atom2, atom1)] = bond
         return self
-
-    @property
-    def bonds(self):
-        return self._bonds
 
     def unuque_bonds(self):
         unique_used = set()

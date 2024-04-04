@@ -86,5 +86,10 @@
             "norm": "enyne",
             "short": "enyne"
         }
+    },
+    "prefix": {
+        "yl": {
+            "norm": "yl"
+        }
     }
 }

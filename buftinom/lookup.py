@@ -41,6 +41,9 @@ class PrimarySuffix(Enum):
     # one C=C & one C≡C
     ENYNE = _("psuffix.enyne", short=True)
 
+class Prefix(Enum):
+    YL = _("prefix.yl")
+
 
 BOND_PRIORITY = {
     BondType.SINGLE: 1,

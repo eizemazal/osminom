@@ -14,6 +14,19 @@
 - Suffixes
 
 
+# Steps involved
+
+1) The first step in giving IUPAC name to an organic compound is to select the parent chain and assign a word root.
+
+2) Next, the appropriate primary suffix(es) must be added to the root word to indicate the saturation or unsaturation.
+
+3) If the molecule contains functional group or groups, a secondary suffix must be added to indicate the main functional group.
+
+4) Prefix the root word with the infix "cyclo" if the parent chain is cyclic; or with the infix "spiro" if it is a spiro compound; or with the infix "bicyclo" if the compound is bicyclic.
+
+5) Finally add  prefix(es) to the IUPAC name, if there are side chains or substituents on the parent chain.
+
+
 
 
 ## Functional group priority
