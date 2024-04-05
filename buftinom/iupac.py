@@ -137,27 +137,13 @@ class Alogrythms:
         return leaf_distances
 
     @cached_property
-    def deduped_chains(self) -> list[Chain]:
+    def all_chains(self) -> list[Chain]:
         self.leaf_distances
         if len(self.mol.atoms) == 1:
             a = self.mol.atoms[0]
             return [[a]]
 
-        deduped: list[Chain] = []
-
-        existing_chains: set[ChainKey] = set()
-
-        for chain in self.chains:
-            key = chainkey(chain)
-            if key in existing_chains:
-                continue
-
-            existing_chains.add(key)
-            existing_chains.add(reversekey(key))
-
-            deduped.append(chain)
-
-        return deduped
+        return self.chains
 
     def max_chains(self, chains: list[Chain]) -> list[Chain]:
         maxlen = len(max(chains, key=len))
@@ -191,7 +177,7 @@ class Alogrythms:
         chains = self.orient_by_leafs(chains)
         splits: list[Chain] = []
 
-        existing: set[ChainKey] = set()
+        existing: set[ChainKey] = {chainkey(chain)}
 
         for splitting in chains:
             buffer: Chain = []
@@ -204,12 +190,13 @@ class Alogrythms:
                 if not buffer:
                     continue
 
+                buffer.append(atom)
                 key = chainkey(buffer)
                 if key not in existing:
-                    buffer.append(atom)
                     splits.append(list(buffer))
                     existing.add(key)
                     existing.add(reversekey(key))
+                    break
 
                 buffer = []
 
@@ -254,7 +241,7 @@ class Alogrythms:
         return [g.chains for g in groups]
 
     def decompose(self):
-        chains = self.deduped_chains
+        chains = self.all_chains
 
         def _decompose(chains: list[Chain]):
             connections: dict[Atom, list[Chain]] = defaultdict(list)

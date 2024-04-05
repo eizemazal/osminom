@@ -82,8 +82,10 @@ def test_decomposed_chain_name(parser, smiles, expected):
     [
         ("CCC(C)(C)CC", "3,3-dimethylpentane"),
         ("CC(C)CC(C)C", "2,4-dimethylpentane"),
-        ("CC(CC)C(C)CC", "2-ethyl-4-methylhexane"),
-        ("CCCCC(CC)C(C)CCC", "4-ethyl-3-methylnonane"),
+        # Note here he found that it is hexane, ill provide numeration for clearance
+        #  3 21 4   56
+        ("CC(CC)C(C)CC", "3,4-dimethylhexane"),
+        ("CCCCC(CC)C(C)CCC", "5-ethyl-4-methylnonane"),
     ],
 )
 def test_decomposed_multichain(parser, smiles, expected):

@@ -83,9 +83,9 @@ def test_leaf_cycle():
 def test_max_chain():
     algo = algorythms("BCCCl(CN)CCCP")
 
-    chains = algo.max_chains(algo.deduped_chains)
+    chains = algo.max_chains(algo.all_chains)
 
-    assert len(chains) == 1
+    assert len(chains) == 2
     chain = chains[0]
 
     assert symkey(chain) in {("B", "P"), ("P", "B")}
@@ -93,9 +93,9 @@ def test_max_chain():
 
 def test_stipchains():
     algo = algorythms("BCCCl(CN)CCCP")
-    chain = algo.max_chain(algo.deduped_chains)
+    chain = algo.max_chain(algo.all_chains)
 
-    subchains = algo.stripchains(algo.deduped_chains, chain)
+    subchains = algo.stripchains(algo.all_chains, chain)
 
     assert len(subchains) == 1
 
@@ -106,9 +106,9 @@ def test_stipchains():
 
 def test_stipchains_many():
     algo = algorythms("BCCCCCCO(C(B)CN)I(C(B)CP)CCCCCCP")
-    chain = algo.max_chain(algo.deduped_chains)
+    chain = algo.max_chain(algo.all_chains)
 
-    subchains = algo.stripchains(algo.deduped_chains, chain)
+    subchains = algo.stripchains(algo.all_chains, chain)
 
     assert len(subchains) == 4
     assert set(symkey(sc) for sc in subchains) == {
@@ -121,9 +121,9 @@ def test_stipchains_many():
 
 def test_stipchains_group():
     algo = algorythms("BCCCCCCO(C(B)CN)I(C(B)CP)CCCCCCP")
-    chain = algo.max_chain(algo.deduped_chains)
+    chain = algo.max_chain(algo.all_chains)
 
-    subchains = algo.stripchains(algo.deduped_chains, chain)
+    subchains = algo.stripchains(algo.all_chains, chain)
     groupped = algo.group_by_ends(subchains)
 
     assert len(groupped) == 2
