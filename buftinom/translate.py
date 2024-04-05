@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import KeysView, Literal, TypedDict, Unpack
 
 
-@dataclass(frozen=True, eq=True, unsafe_hash=True)
+@dataclass(frozen=True, eq=True, unsafe_hash=True, order=True)
 class WordForm:
     norm: str = field(compare=True)
     short: str = field(default=None, compare=False)

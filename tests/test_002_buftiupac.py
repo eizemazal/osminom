@@ -1,6 +1,6 @@
 import pytest
 
-from buftinom.iupac import ChainNamer, Iupac, iupac2str
+from buftinom.iupac import Iupac, iupac2str
 from buftinom.smiles_parser import SmilesParser
 
 
@@ -39,9 +39,9 @@ def parser():
 def test_simple_chain_name(parser, smiles, expected):
     (mol,) = parser.parse(smiles)
     iupac = Iupac(mol)
-    namer = ChainNamer(iupac.mol, iupac.decomposition, primary_chain=True)
+    name = iupac.decompose_name(iupac.decomposition)
 
-    assert namer.simple_chain_name(mol._atoms) == expected
+    assert iupac2str(name) == expected
 
 
 @pytest.mark.parametrize(
