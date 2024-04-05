@@ -158,6 +158,7 @@ class Alogrythms:
     def max_chain(self, chains: list[Chain]) -> Chain:
         max_chains = self.max_chains(chains)
         # assert len(max_chains) == 1, "Not implemented for multiple max chains"
+        # first is ok for not but there are priorities
         max_chain = max_chains[0]
         return max_chain
 
@@ -219,25 +220,51 @@ class Alogrythms:
 
         return grouped
 
-    def interconneced(self, chains: list[Chain]):
-        pass
+    def interconneced(self, chains: list[Chain]) -> list[list[Chain]]:
+        if len(chains) == 1:
+            return [chains]
+        first_chain, *chains = chains
+        groups = [ChainGroup(matcher=set(first_chain), chains=[first_chain])]
+
+        for chain in chains:
+            chain_atoms = set(chain)
+            in_existed_group = False
+            for group in groups:
+                if chain_atoms & group.matcher:
+                    group.chains.append(chain)
+                    group.matcher |= set(chain)
+                    in_existed_group = True
+
+            if in_existed_group:
+                continue
+
+            groups.append(ChainGroup(matcher=set(chain), chains=[chain]))
+
+        return [g.chains for g in groups]
 
     def decompose(self):
         chains = self.deduped_chains
 
         def _decompose(chains: list[Chain]):
-            # TODO: разбить по компонентам связности
+            connections: dict[Atom, list[Chain]] = defaultdict(list)
+
             max_chain = self.max_chain(chains)
             subchains = self.stripchains(chains, max_chain)
             groupped = self.group_by_ends(subchains)
 
-            connections: dict[Atom, list[Chain]] = defaultdict(list)
-            for connection, chains in groupped.items():
-                connections[connection].append(_decompose(chains))
+            for connection, groupped_chains in groupped.items():
+                for chaingroup in self.interconneced(groupped_chains):
+                    connections[connection].append(_decompose(chaingroup))
 
             return MolDecomposition(tuple(max_chain), connections)
 
         return _decompose(chains)
+
+
+@dataclass
+class ChainGroup:
+    matcher: set[Atom]
+    chains: list[Chain]
 
 
 class Features:

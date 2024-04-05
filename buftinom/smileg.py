@@ -89,6 +89,22 @@ class Molecule:
         """find first atom by symbol, for test purposes"""
         return [a for a in self._atoms if a.symbol == symbol][0]
 
+    def print_table(self):
+        w = max(len(str(a)) for a in self._atoms) + 2
+
+        print(_scenter("\\", w), end="")
+        for a in self._atoms:
+            print(_scenter(a, w), end="")
+        print()
+
+        for a1 in self._atoms:
+            print(_scenter(a1, w), end="")
+            for a2 in self._atoms:
+                bond = self._bonds.get((a1, a2), " ")
+                print(_scenter(bond, w), end="")
+            print()
+        print()
+
 
 class MoleculeConstructor(Molecule):
     def __init__(self):
@@ -193,22 +209,6 @@ class MoleculeConstructor(Molecule):
 
     def __str__(self):
         return f"Molecule({len(self._atoms)} atoms, {len(self._bonds)} bonds)"
-
-    def print_table(self):
-        w = max(len(str(a)) for a in self._atoms) + 2
-
-        print(_scenter("\\", w), end="")
-        for a in self._atoms:
-            print(_scenter(a, w), end="")
-        print()
-
-        for a1 in self._atoms:
-            print(_scenter(a1, w), end="")
-            for a2 in self._atoms:
-                bond = self._bonds.get((a1, a2), " ")
-                print(_scenter(bond, w), end="")
-            print()
-        print()
 
     __repr__ = __str__
 

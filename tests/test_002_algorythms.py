@@ -1,6 +1,6 @@
 import pytest
 
-from buftinom.iupac import Alogrythms, Chain, chainkey
+from buftinom.iupac import Alogrythms, Chain, MolDecomposition, chainkey
 from buftinom.smileg import Atom
 from buftinom.smiles_parser import SmilesParser
 
@@ -172,7 +172,34 @@ def test_decompose(smiles):
 
 
 def test_decompose_multiple_connections():
-    algo = algorythms("CCCCB(C(C)C(C)C)(C(C)C(C)C)CCCC")
+    algo = algorythms("CCB(C)(C)CC")
+
+    algo.mol.print_table()
 
     main = algo.decompose()
     main.print()
+
+
+def test_decompose_multiple_tree_connections():
+    algo = algorythms("CCCCB(C(N)C(P)C)(C(C)C(C)C)CCCC")
+
+    main = algo.decompose()
+    main.print()
+
+
+def test_decomps_print():
+    algo = algorythms("CCCCCCCCCC")
+
+    a, b, c, d, e, f, g, h, i, j = algo.mol.atoms
+
+    dec = MolDecomposition(
+        [a, b, c, d],
+        {
+            b: [
+                MolDecomposition([e, f], {}),
+                MolDecomposition([g, h, i], {h: [MolDecomposition([j], {})]}),
+            ]
+        },
+    )
+
+    dec.print()

@@ -54,7 +54,7 @@ def test_simple_chain_name(parser, smiles, expected):
 def test_decomposed_chain_name(parser, smiles, expected):
     (mol,) = parser.parse(smiles)
     iupac = Iupac(mol)
-
+    
     names = iupac.subchain_simple_names()
 
     for dec, connector, name in names:
