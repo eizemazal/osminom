@@ -14,6 +14,9 @@ class WordForm:
     def get(self, form: Literal["norm", "short"]):
         return getattr(self, form)
 
+    def __str__(self):
+        return self.norm
+
 
 class WordFromDict(TypedDict):
     norm: str
@@ -50,6 +53,9 @@ def translate(key: str, /, **forms: Unpack[FormParams]) -> WordForm:
 
 def _translate(dictionary, key, /, **forms: Unpack[FormParams]):
     formDict = _deepget(dictionary, key.split("."))
+    if not forms and isinstance(formDict, str):
+        return WordForm(norm=formDict)
+
     for form, required in forms.items():
         if required and not formDict.get(form):
             raise ValueError(f"Missing required form {form} for {key}")

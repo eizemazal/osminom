@@ -355,7 +355,10 @@ class ChainNamer:
                 if self.options.primary_chain:
                     form = suffix.value.norm
                 else:
-                    form = Prefix.YL.value.norm
+                    if suffix.value == PrimarySuffix.ANE:
+                        form = Prefix.YL.value.norm
+                    else:
+                        form = suffix.value.short + Prefix.YL.value.norm
 
             if pos == 0:
                 result.append(form)

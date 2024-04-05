@@ -1,65 +1,25 @@
 {
     "root": {
-        "meth": {
-            "norm": "meth"
-        },
-        "eth": {
-            "norm": "eth"
-        },
-        "prop": {
-            "norm": "prop"
-        },
-        "but": {
-            "norm": "but"
-        },
-        "pent": {
-            "norm": "pent"
-        },
-        "hex": {
-            "norm": "hex"
-        },
-        "hept": {
-            "norm": "hept"
-        },
-        "oct": {
-            "norm": "oct"
-        },
-        "non": {
-            "norm": "non"
-        },
-        "dec": {
-            "norm": "dec"
-        },
-        "undec": {
-            "norm": "undec"
-        },
-        "dodec": {
-            "norm": "dodec"
-        },
-        "tridec": {
-            "norm": "tridec"
-        },
-        "tetradec": {
-            "norm": "tetradec"
-        },
-        "pentadec": {
-            "norm": "pentadec"
-        },
-        "hexadec": {
-            "norm": "hexadec"
-        },
-        "heptadec": {
-            "norm": "heptadec"
-        },
-        "octadec": {
-            "norm": "octadec"
-        },
-        "nonadec": {
-            "norm": "nonadec"
-        },
-        "icos": {
-            "norm": "icos"
-        }
+        "meth": "meth",
+        "eth": "eth",
+        "prop": "prop",
+        "but": "but",
+        "pent": "pent",
+        "hex": "hex",
+        "hept": "hept",
+        "oct": "oct",
+        "non": "non",
+        "dec": "dec",
+        "undec": "undec",
+        "dodec": "dodec",
+        "tridec": "tridec",
+        "tetradec": "tetradec",
+        "pentadec": "pentadec",
+        "hexadec": "hexadec",
+        "heptadec": "heptadec",
+        "octadec": "octadec",
+        "nonadec": "nonadec",
+        "icos": "icos"
     },
     "psuffix": {
         "ane": {
@@ -88,8 +48,16 @@
         }
     },
     "prefix": {
-        "yl": {
-            "norm": "yl"
-        }
+        "yl": "yl"
+    },
+    "multiplying": {
+        "di": "di",
+        "tri": "tri",
+        "tetra": "tetra",
+        "penta": "penta",
+        "bis": "bis",
+        "tris": "tris",
+        "tetrakis": "tetrakis",
+        "pentakis": "pentakis"
     }
 }

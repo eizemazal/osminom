@@ -28,7 +28,7 @@ class RootWord(Enum):
 
 
 class PrimarySuffix(Enum):
-    # (all C-C bonds)
+    # all C-C bonds
     ANE = _("psuffix.ane", short=True)
     # one C=C
     ENE = _("psuffix.ene", short=True)
@@ -41,8 +41,21 @@ class PrimarySuffix(Enum):
     # one C=C & one C≡C
     ENYNE = _("psuffix.enyne", short=True)
 
+
 class Prefix(Enum):
     YL = _("prefix.yl")
+
+
+class MultiplyingPrefix(Enum):
+    di = _("multiplying.di")
+    tri = _("multiplying.tri")
+    tetra = _("multiplying.tetra")
+    penta = _("multiplying.penta")
+
+    bis = _("multiplying.bis")
+    tris = _("multiplying.tris")
+    tetrakis = _("multiplying.tetrakis")
+    pentakis = _("multiplying.pentakis")
 
 
 BOND_PRIORITY = {
