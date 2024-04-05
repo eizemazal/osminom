@@ -47,15 +47,16 @@ class Prefix(Enum):
 
 
 class MultiplyingPrefix(Enum):
-    di = _("multiplying.di")
-    tri = _("multiplying.tri")
-    tetra = _("multiplying.tetra")
-    penta = _("multiplying.penta")
+    ONE = _("empty")
+    DI = _("multiplying.di")
+    TRI = _("multiplying.tri")
+    TETRA = _("multiplying.tetra")
+    PENTA = _("multiplying.penta")
 
-    bis = _("multiplying.bis")
-    tris = _("multiplying.tris")
-    tetrakis = _("multiplying.tetrakis")
-    pentakis = _("multiplying.pentakis")
+    BIS = _("multiplying.bis")
+    TRIS = _("multiplying.tris")
+    TETRAKIS = _("multiplying.tetrakis")
+    PENTAKIS = _("multiplying.pentakis")
 
 
 BOND_PRIORITY = {
@@ -94,4 +95,22 @@ ROOT_BY_LENGTH = {
     18: RootWord.OCTADEC,
     19: RootWord.NONADEC,
     20: RootWord.ICOS,
+}
+
+
+MULTI_BY_PREFIX = {
+    1: MultiplyingPrefix.ONE,
+    2: MultiplyingPrefix.DI,
+    3: MultiplyingPrefix.TRI,
+    4: MultiplyingPrefix.TETRA,
+    5: MultiplyingPrefix.PENTA,
+}
+
+
+MULTI_MULTI_BY_PREFIX = {
+    1: MultiplyingPrefix.ONE,
+    2: MultiplyingPrefix.BIS,
+    3: MultiplyingPrefix.TRIS,
+    4: MultiplyingPrefix.TETRAKIS,
+    5: MultiplyingPrefix.PENTAKIS,
 }

@@ -1,6 +1,6 @@
 import pytest
 
-from buftinom.iupac import ChainNamer, Iupac
+from buftinom.iupac import ChainNamer, Iupac, iupac2str
 from buftinom.smiles_parser import SmilesParser
 
 
@@ -75,3 +75,23 @@ def test_decomposed_chain_name(parser, smiles, expected):
 
     for dec, connector, name in names:
         print(name, connector, dec.chain)
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("CCC(C)(C)CC", "3,3-dimethylpentane"),
+        ("CC(C)CC(C)C", "2,4-dimethylpentane"),
+        ("CC(CC)C(C)CC", "2-ethyl-4-methylhexane"),
+        ("CCCCC(CC)C(C)CCC", "4-ethyl-3-methylnonane"),
+    ],
+)
+def test_decomposed_multichain(parser, smiles, expected):
+    (mol,) = parser.parse(smiles)
+    iupac = Iupac(mol)
+
+    mol.print_table()
+    iupac.decomposition.print()
+
+    name = iupac.decompose_name(iupac.decomposition)
+    assert iupac2str(name) == expected

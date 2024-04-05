@@ -1,11 +1,19 @@
 import heapq
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
-from typing import Generator, NotRequired, TypeAlias, TypedDict, Unpack
+from typing import Generator, NamedTuple, NotRequired, TypeAlias, TypedDict, Unpack
 
-from buftinom.lookup import ROOT_BY_LENGTH, Prefix, PrimarySuffix, bond_prio_cmp
+from buftinom.lookup import (
+    MULTI_BY_PREFIX,
+    MULTI_MULTI_BY_PREFIX,
+    ROOT_BY_LENGTH,
+    Prefix,
+    PrimarySuffix,
+    bond_prio_cmp,
+)
 from buftinom.smileg import Atom, Bond, BondType, Molecule, MoleculeConstructor
+from buftinom.translate import WordForm
 
 ChainKey: TypeAlias = tuple[Atom, Atom]
 Chain: TypeAlias = list[Atom]
@@ -101,7 +109,7 @@ class Alogrythms:
 
         return distances, predecessors
 
-    def _unfold_chain(self, predecessors, start, end) -> Chain:
+    def unfold_chain(self, predecessors, start, end) -> Chain:
         path = []
         node = end
         while node is not None:
@@ -123,7 +131,7 @@ class Alogrythms:
             for a2 in leafs:
                 if a1 == a2:
                     continue
-                self.chains.append(self._unfold_chain(a1_predecessors, a1, a2))
+                self.chains.append(self.unfold_chain(a1_predecessors, a1, a2))
                 leaf_distances[(a1, a2)] = a1_distances[a2]
 
         return leaf_distances
@@ -204,6 +212,9 @@ class Alogrythms:
                     existing.add(reversekey(key))
 
                 buffer = []
+
+            if buffer:
+                print(buffer)
 
         return splits
 
@@ -390,7 +401,138 @@ class AtomFeatures:
     chain_index: int
     atom: Atom
     bond_ahead: Bond
-    subchain: MolDecomposition | None
+    subchains: list[MolDecomposition]
+
+
+class Synt(NamedTuple):
+    """SYNtax uniT"""
+
+    index: int
+    value: WordForm
+
+    def __str__(self):
+        return f"{self.index}-{self.value}"
+
+    __repr__ = __str__
+
+
+class Subn(NamedTuple):
+    """SUB Name"""
+
+    index: int
+    value: "IupacName"
+
+    def __str__(self):
+        return f"{self.index}-{self.value}"
+
+    __repr__ = __str__
+
+
+def s(obj):
+    if not obj:
+        return ""
+    return str(obj)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class IupacName:
+    prefixes: list[Subn] = field(default_factory=list)
+    infix: WordForm = None
+    root_word: WordForm
+    prime_suffixes: list[Synt]
+    sub_suffix: WordForm = None
+    func_suffix: WordForm = None
+
+    def __repr__(self):
+        return "".join(
+            map(
+                s,
+                [
+                    self.prefixes,
+                    self.infix,
+                    self.root_word,
+                    self.prime_suffixes,
+                    self.sub_suffix,
+                    self.func_suffix,
+                ],
+            )
+        )
+
+
+def suffixes2str(suffixes: list[Synt], sub_suffix: WordForm):
+    res: list[str] = []
+    ssuff: list[Synt] = sorted(suffixes, key=lambda s: s.value)
+    for idx, name in ssuff:
+        if idx > 1:
+            res.extend(["-", str(idx), "-", name.short])
+        else:
+            res.append(name.short)
+
+    if sub_suffix:
+        res.extend(sub_suffix.norm)
+    else:
+        res[-1] = ssuff[-1].value.norm
+
+    return "".join(res)
+
+
+def preffixes2str(preffixes: list[Subn]):
+    if not preffixes:
+        return None
+
+    #
+    subnames = [(idx, iupac2str(subn)) for idx, subn in preffixes]
+    #
+
+    groups: dict[str, list[int]] = defaultdict(list)
+
+    for idx, name in subnames:
+        groups[name].append(idx)
+
+    ordered = sorted(list(groups.items()), key=lambda g: g[0])
+
+    res: list[str] = []
+
+    multiselector = MULTI_BY_PREFIX
+
+    for name, indexes in ordered:
+        subname: list[str] = []
+
+        name_complex = name[0].isdigit()
+        if name_complex:
+            multiselector = MULTI_MULTI_BY_PREFIX
+
+        if indexes:
+            indexes = list(map(str, sorted(indexes)))
+            subname.extend(
+                [
+                    ",".join(indexes),
+                    "-",
+                    multiselector.get(len(indexes)).value.norm,
+                ]
+            )
+
+        if name_complex:
+            subname.append("(")
+
+        subname.append(name)
+
+        if name_complex:
+            subname.append(")")
+
+        res.append("".join(subname))
+
+    return "-".join(res)
+
+
+def iupac2str(iupac: IupacName):
+    preffix = preffixes2str(iupac.prefixes)
+    infix = iupac.infix
+    root = iupac.root_word.norm
+    suffix = suffixes2str(iupac.prime_suffixes, iupac.sub_suffix)
+    fsuffix = iupac.func_suffix
+
+    return "".join(map(s, [preffix, infix, root, suffix, fsuffix]))
 
 
 class Iupac:
@@ -417,12 +559,13 @@ class Iupac:
             yield dec, connector, namer.simple_chain_name(dec.chain)
 
     def features(self, decomposition: MolDecomposition):
+        """Excluding last atom"""
         chain = decomposition.chain
 
         for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
             bond = self.mol.bonds[(a1, a2)]
 
-            yield AtomFeatures(i, a1, bond, decomposition.connections.get(a2))
+            yield AtomFeatures(i, a1, bond, decomposition.connections.get(a1, []))
 
     def fpod(self, decomposition: MolDecomposition):
         straight = decomposition
@@ -434,9 +577,17 @@ class Iupac:
         reverse_features = list(self.features(reverse))
 
         for fstraight, freversed in zip(straight_features, reverse_features):
-            substrait = fstraight.subchain is not None
-            subrevers = freversed.subchain is not None
+            sub_strait = len(fstraight.subchains)
+            sub_revers = len(freversed.subchains)
 
+            # First subchain
+            subchain_cmp = sub_strait - sub_revers
+            if subchain_cmp > 0:
+                return straight, straight_features
+            if subchain_cmp < 0:
+                return reverse, reverse_features
+
+            # First posin of unsaturation
             bond_cmp = bond_prio_cmp(fstraight.bond_ahead, freversed.bond_ahead)
             if bond_cmp > 0:
                 return straight, straight_features
@@ -445,5 +596,48 @@ class Iupac:
 
         return straight, straight_features
 
-    def decompose_name(self, decomposition: MolDecomposition):
-        features = list(self.features(decomposition))
+    def chain_name(decomp: MolDecomposition, features: list[AtomFeatures]):
+        pass
+
+    def suffixes_by_features(self, features: list[AtomFeatures], *, primary: bool):
+        result = []
+
+        for feature in features:
+            if feature.bond_ahead.type == BondType.DOUBLE:
+                result.append(Synt(feature.chain_index, PrimarySuffix.ENE.value))
+
+            if feature.bond_ahead.type == BondType.TRIPLE:
+                result.append(Synt(feature.chain_index, PrimarySuffix.YNE.value))
+
+        if not result and primary:
+            result.append(Synt(1, PrimarySuffix.ANE.value))
+
+        return result
+
+    def preffixes_by_features(self, features: list[AtomFeatures]):
+        result = []
+
+        for feature in features:
+            for subchain in feature.subchains:
+                #
+                subname = self.decompose_name(subchain, primary=False)
+                #
+                result.append(Subn(feature.chain_index, subname))
+        return result
+
+    def decompose_name(self, decomposition: MolDecomposition, *, primary: bool = True):
+        decomp, features = self.fpod(decomposition)
+
+        root = ROOT_BY_LENGTH[len(decomp.chain)].value
+        suffix = self.suffixes_by_features(features, primary=primary)
+        subsuff = Prefix.YL.value if not primary else None
+        preffix = self.preffixes_by_features(features)
+
+        return IupacName(
+            prefixes=preffix,
+            infix=None,
+            root_word=root,
+            prime_suffixes=suffix,
+            sub_suffix=subsuff,
+            func_suffix=None,
+        )

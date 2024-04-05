@@ -1,21 +1,23 @@
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 from typing import KeysView, Literal, TypedDict, Unpack
 
 
-@dataclass
+@dataclass(frozen=True, eq=True, unsafe_hash=True)
 class WordForm:
-    norm: str
-    short: str = None
+    norm: str = field(compare=True)
+    short: str = field(default=None, compare=False)
 
     def get(self, form: Literal["norm", "short"]):
         return getattr(self, form)
 
     def __str__(self):
         return self.norm
+
+    __repr__ = __str__
 
 
 class WordFromDict(TypedDict):
