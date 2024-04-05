@@ -2,34 +2,60 @@ import heapq
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
-from typing import TypeAlias
+from typing import Generator, NotRequired, TypeAlias, TypedDict, Unpack
 
-from buftinom.lookup import ROOT_BY_LENGTH, PrimarySuffix, bond_prio_cmp
-from buftinom.smileg import Atom, BondType, Molecule, MoleculeConstructor
+from buftinom.lookup import ROOT_BY_LENGTH, Prefix, PrimarySuffix, bond_prio_cmp
+from buftinom.smileg import Atom, Bond, BondType, Molecule, MoleculeConstructor
 
-Chainmap: TypeAlias = dict[tuple[Atom, Atom], list[Atom]]
+ChainKey: TypeAlias = tuple[Atom, Atom]
+Chain: TypeAlias = list[Atom]
 
 
-def chainkey(chain: list[Atom]) -> tuple[Atom, Atom]:
+def chainkey(chain: Chain) -> ChainKey:
+    assert len(chain) > 0, "Empty chain has no key"
     return chain[0], chain[-1]
 
 
-@dataclass
+def reversekey(key: ChainKey) -> ChainKey:
+    return key[1], key[0]
+
+
+def reversechain(chain: Chain) -> Chain:
+    return list(reversed(chain))
+
+
+@dataclass(frozen=True)
 class MolDecomposition:
-    chain: list[Atom]
-    connections: dict[Atom, "MolDecomposition"]
+    chain: Chain
+    connections: dict[Atom, list["MolDecomposition"]]
 
     def print(self, level=0):
         print(self.chain)
-        for connection, decomp in self.connections.items():
-            print("    " * level, connection, ":", end=" ")
-            decomp.print(level + 2)
+        for connection, decomps in self.connections.items():
+            for decomp in decomps:
+                print("    " * level, connection, ":", end=" ")
+                decomp.print(level + 2)
+
+    def subdecompositions(
+        self, connector: Atom = None
+    ) -> Generator[tuple[Atom | None, "MolDecomposition"], None, None]:
+        yield connector, self
+
+        for connector, decomps in self.connections.items():
+            for decomp in decomps:
+                yield from decomp.subdecompositions(connector)
+
+    def __hash__(self) -> int:
+        return id(self)
+
+    def __eq__(self, o: object) -> bool:
+        return id(self) == id(o)
 
 
 class Alogrythms:
     def __init__(self, mol: Molecule):
         self.mol = mol
-        self.chains: Chainmap = {}
+        self.chains: list[Chain] = []
 
     def table2list(self):
         adj_list = defaultdict(list)
@@ -59,7 +85,7 @@ class Alogrythms:
         distances = {a: float("inf") for a in self.mol.atoms}
         distances[start] = 0
 
-        predecessors = {a: None for a in self.mol.atoms}
+        predecessors: dict[Atom:Atom] = {a: None for a in self.mol.atoms}
 
         while queue:
             dist, node = heapq.heappop(queue)
@@ -75,7 +101,7 @@ class Alogrythms:
 
         return distances, predecessors
 
-    def _unfold_chain(self, predecessors, start, end):
+    def _unfold_chain(self, predecessors, start, end) -> Chain:
         path = []
         node = end
         while node is not None:
@@ -89,7 +115,7 @@ class Alogrythms:
     def leaf_distances(self):
         """Calculate distances between all leaf atoms"""
         leafs = self.leafs
-        leaf_distances: Chainmap = {}
+        leaf_distances: dict[ChainKey, float] = {}
 
         for a1 in leafs:
             a1_distances, a1_predecessors = self.distances_from(a1)
@@ -97,99 +123,119 @@ class Alogrythms:
             for a2 in leafs:
                 if a1 == a2:
                     continue
-                self.chains[(a1, a2)] = self._unfold_chain(a1_predecessors, a1, a2)
+                self.chains.append(self._unfold_chain(a1_predecessors, a1, a2))
                 leaf_distances[(a1, a2)] = a1_distances[a2]
 
         return leaf_distances
 
     @cached_property
-    def deduped_chains(self):
+    def deduped_chains(self) -> list[Chain]:
         self.leaf_distances
+        if len(self.mol.atoms) == 1:
+            a = self.mol.atoms[0]
+            return [[a]]
 
-        deduped: Chainmap = {}
+        deduped: list[Chain] = []
 
-        for (a1, a2), chain in self.chains.items():
-            if (a1, a2) in deduped or (a2, a1) in deduped:
+        existing_chains: set[ChainKey] = set()
+
+        for chain in self.chains:
+            key = chainkey(chain)
+            if key in existing_chains:
                 continue
 
-            deduped[(a1, a2)] = chain
+            existing_chains.add(key)
+            existing_chains.add(reversekey(key))
+
+            deduped.append(chain)
 
         return deduped
 
-    def max_chains(self, chains: Chainmap) -> Chainmap:
-        longest_chain_len = len(max(chains.values(), key=len))
+    def max_chains(self, chains: list[Chain]) -> list[Chain]:
+        maxlen = len(max(chains, key=len))
+        return [chain for chain in chains if len(chain) == maxlen]
 
-        return {
-            index: chain
-            for index, chain in chains.items()
-            if len(chain) == longest_chain_len
-        }
-
-    def max_chain(self, chains: Chainmap) -> list[Atom]:
+    def max_chain(self, chains: list[Chain]) -> Chain:
         max_chains = self.max_chains(chains)
-        assert len(max_chains) == 1, "Not implemented for multiple max chains"
-        _, max_chain = max_chains.popitem()
+        # assert len(max_chains) == 1, "Not implemented for multiple max chains"
+        max_chain = max_chains[0]
         return max_chain
 
-    def orient_by_leafs(self, chains: Chainmap) -> Chainmap:
+    def orient_by_leafs(self, chains: list[Chain]) -> list[Chain]:
         leafs = self.leafs
-        oriented: Chainmap = {}
+        oriented: list[Chain] = []
 
-        for (a1, a2), chain in chains.items():
-            if a2 in leafs:
-                oriented[(a2, a1)] = list(reversed(chain))
-            else:
-                oriented[(a1, a2)] = chain
+        for chain in chains:
+            end = chain[-1]
+            if end in leafs:
+                chain = reversechain(chain)
+
+            oriented.append(chain)
 
         return oriented
 
-    def stripchains(self, chains: Chainmap, chain: list[Atom]):
+    def stripchains(self, chains: list[Chain], chain: Chain):
         """Generate all subchains
         All subchains will start with leaf, and end on the input chain
         """
-        chainset = set(chain)
+        chain_atoms = set(chain)
         chains = self.orient_by_leafs(chains)
-        splits: Chainmap = {}
+        splits: list[Chain] = []
 
-        for splitting in chains.values():
-            buffer: list[Atom] = []
-            for a in splitting:
-                if a in chainset:
-                    if buffer:
-                        buffer.append(a)
-                        splits[chainkey(buffer)] = list(buffer)
-                    buffer = []
+        existing: set[ChainKey] = set()
+
+        for splitting in chains:
+            buffer: Chain = []
+
+            for atom in splitting:
+                if atom not in chain_atoms:
+                    buffer.append(atom)
                     continue
 
-                buffer.append(a)
+                if not buffer:
+                    continue
+
+                key = chainkey(buffer)
+                if key not in existing:
+                    buffer.append(atom)
+                    splits.append(list(buffer))
+                    existing.add(key)
+                    existing.add(reversekey(key))
+
+                buffer = []
 
         return splits
 
-    def group_by_ends(self, chains: Chainmap):
-        grouped: dict[Atom, Chainmap] = defaultdict(dict)
+    def group_by_ends(self, chains: list[Chain]):
+        grouped: dict[Atom, list[Chain]] = defaultdict(list)
 
-        for (start, end), chain_end in chains.items():
-            assert len(chain_end) > 1, chain_end
-            *chain, end = chain_end
+        for chain in chains:
+            assert len(chain) > 1, chain
+            *chain, end = chain
 
             # reverse to orient the chain from the groupping atom forward
-            grouped[end][(chain[-1], start)] = list(reversed(chain))
+            # no real effect, just easier to understand for humans
+            grouped[end].append(reversechain(chain))
 
         return grouped
+
+    def interconneced(self, chains: list[Chain]):
+        pass
 
     def decompose(self):
         chains = self.deduped_chains
 
-        def _decompose(chains):
+        def _decompose(chains: list[Chain]):
+            # TODO: разбить по компонентам связности
             max_chain = self.max_chain(chains)
             subchains = self.stripchains(chains, max_chain)
             groupped = self.group_by_ends(subchains)
 
-            connections = {}
+            connections: dict[Atom, list[Chain]] = defaultdict(list)
             for connection, chains in groupped.items():
-                connections[connection] = _decompose(chains)
+                connections[connection].append(_decompose(chains))
 
-            return MolDecomposition(max_chain, connections)
+            return MolDecomposition(tuple(max_chain), connections)
 
         return _decompose(chains)
 
@@ -224,7 +270,7 @@ class Features:
 
     def bonds(self, reverse):
         if len(self.chain) == 1:
-            return (0, (self.chain[0], BondType.SINGLE, self.chain[0]))
+            return
 
         chain = self.chain
         if reverse:
@@ -243,9 +289,22 @@ class Features:
                 yield i, (a1, bond, a2)
 
 
-class Iupac:
-    def __init__(self, mol: MoleculeConstructor):
+class NamingOptionsDict(TypedDict):
+    primary_chain: NotRequired[bool]
+
+
+@dataclass(frozen=True)
+class NamingOptions:
+    primary_chain: bool = False
+
+
+class ChainNamer:
+    def __init__(
+        self, mol: Molecule, dec: MolDecomposition, **options: Unpack[NamingOptionsDict]
+    ):
         self.mol = mol
+        self.dec = dec
+        self.options = NamingOptions(**options)
 
     def suffix_by_bonds(self, bonds: list[tuple[int, tuple[Atom, BondType, Atom]]]):
         if not bonds:
@@ -266,7 +325,10 @@ class Iupac:
         for i, (pos, suffix) in enumerate(primary_suffixes):
             form = suffix.value.short
             if i == len(primary_suffixes) - 1:
-                form = suffix.value.norm
+                if self.options.primary_chain:
+                    form = suffix.value.norm
+                else:
+                    form = Prefix.YL.value.norm
 
             if pos == 0:
                 result.append(form)
@@ -291,3 +353,67 @@ class Iupac:
         link = "-" if psuffixes[0].isnumeric() else ""
 
         return f"{root.value.norm}{link}{joined}"
+
+
+@dataclass
+class AtomFeatures:
+    chain_index: int
+    atom: Atom
+    bond_ahead: Bond
+    subchain: MolDecomposition | None
+
+
+class Iupac:
+    def __init__(self, mol: Molecule):
+        self.mol = mol
+
+    @cached_property
+    def decomposition(self):
+        return Alogrythms(self.mol).decompose()
+
+    def subchain_simple_names(self):
+        decomposition = self.decomposition
+
+        # decomp : (ConnectorAtom, str)
+        # ConnectorAtom == None for primary chain
+
+        for connector, dec in decomposition.subdecompositions():
+            namer = ChainNamer(
+                self.mol,
+                dec,
+                primary_chain=dec == decomposition,
+            )
+
+            yield dec, connector, namer.simple_chain_name(dec.chain)
+
+    def features(self, decomposition: MolDecomposition):
+        chain = decomposition.chain
+
+        for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
+            bond = self.mol.bonds[(a1, a2)]
+
+            yield AtomFeatures(i, a1, bond, decomposition.connections.get(a2))
+
+    def fpod(self, decomposition: MolDecomposition):
+        straight = decomposition
+        reverse = MolDecomposition(
+            tuple(reversed(straight.chain)), straight.connections
+        )
+
+        straight_features = list(self.features(straight))
+        reverse_features = list(self.features(reverse))
+
+        for fstraight, freversed in zip(straight_features, reverse_features):
+            substrait = fstraight.subchain is not None
+            subrevers = freversed.subchain is not None
+
+            bond_cmp = bond_prio_cmp(fstraight.bond_ahead, freversed.bond_ahead)
+            if bond_cmp > 0:
+                return straight, straight_features
+            if bond_cmp < 0:
+                return reverse, reverse_features
+
+        return straight, straight_features
+
+    def decompose_name(self, decomposition: MolDecomposition):
+        features = list(self.features(decomposition))

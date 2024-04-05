@@ -1,6 +1,6 @@
 import pytest
 
-from buftinom.iupac import Alogrythms
+from buftinom.iupac import Alogrythms, Chain, chainkey
 from buftinom.smileg import Atom
 from buftinom.smiles_parser import SmilesParser
 
@@ -11,6 +11,11 @@ def algorythms(smiles: str):
 
 def a2s(*atoms: Atom):
     return tuple([a.symbol for a in atoms])
+
+
+def symkey(chain: Chain):
+    a, b = chainkey(chain)
+    return a.symbol, b.symbol
 
 
 @pytest.mark.parametrize(
@@ -81,24 +86,22 @@ def test_max_chain():
     chains = algo.max_chains(algo.deduped_chains)
 
     assert len(chains) == 1
-    (a, b), chain = chains.popitem()
+    chain = chains[0]
 
-    assert (a.symbol, b.symbol) in {("B", "P"), ("P", "B")}
+    assert symkey(chain) in {("B", "P"), ("P", "B")}
 
 
 def test_stipchains():
     algo = algorythms("BCCCl(CN)CCCP")
-    chains = algo.max_chains(algo.deduped_chains)
-    assert len(chains) == 1
-    _, chain = chains.popitem()
+    chain = algo.max_chain(algo.deduped_chains)
 
     subchains = algo.stripchains(algo.deduped_chains, chain)
 
     assert len(subchains) == 1
 
-    (a, b), subchain = subchains.popitem()
+    subchain = subchains[0]
 
-    assert a2s(a, b) in {("Cl", "N"), ("N", "Cl")}
+    assert symkey(subchain) in {("Cl", "N"), ("N", "Cl")}
 
 
 def test_stipchains_many():
@@ -108,7 +111,7 @@ def test_stipchains_many():
     subchains = algo.stripchains(algo.deduped_chains, chain)
 
     assert len(subchains) == 4
-    assert set(a2s(a, b) for a, b in subchains.keys()) == {
+    assert set(symkey(sc) for sc in subchains) == {
         ("B", "O"),
         ("N", "O"),
         ("B", "I"),
@@ -124,7 +127,7 @@ def test_stipchains_group():
     groupped = algo.group_by_ends(subchains)
 
     assert len(groupped) == 2
-    for end, subchains in groupped.items():
+    for _, subchains in groupped.items():
         assert len(subchains) == 2
 
     assert set(a.symbol for a in groupped.keys()) == {"O", "I"}
@@ -151,17 +154,25 @@ def test_decompose(smiles):
 
     assert len(main.connections) == 2
 
-    o_dec = main.connections[o]
+    o_dec = main.connections[o][0]
     assert o_dec.chain[0].symbol == "C"
     assert o_dec.chain[-1].symbol == "N"
 
     assert len(o_dec.connections) == 1
-    oc_dec = list(o_dec.connections.values())[0]
+    oc_dec = list(o_dec.connections.values())[0][0]
     assert oc_dec.chain[0].symbol == "B"
 
-    i_dec = main.connections[i]
+    i_dec = main.connections[i][0]
     assert i_dec.chain[0].symbol == "C"
     assert i_dec.chain[-1].symbol == "P"
 
+    ic_dec = list(i_dec.connections.values())[0][0]
     assert len(i_dec.connections) == 1
-    assert list(i_dec.connections.values())[0].chain[0].symbol == "B"
+    assert ic_dec.chain[0].symbol == "B"
+
+
+def test_decompose_multiple_connections():
+    algo = algorythms("CCCCB(C(C)C(C)C)(C(C)C(C)C)CCCC")
+
+    main = algo.decompose()
+    main.print()

@@ -1,6 +1,6 @@
 import pytest
 
-from buftinom.iupac import Iupac
+from buftinom.iupac import ChainNamer, Iupac
 from buftinom.smiles_parser import SmilesParser
 
 
@@ -36,8 +36,26 @@ def parser():
         ("C=C#C", "propen-2-yne"),
     ],
 )
-def test(parser, smiles, expected):
+def test_simple_chain_name(parser, smiles, expected):
+    (mol,) = parser.parse(smiles)
+    iupac = Iupac(mol)
+    namer = ChainNamer(iupac.mol, iupac.decomposition, primary_chain=True)
+
+    assert namer.simple_chain_name(mol._atoms) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("C", 1),
+        ("CCCCCCCC(C(C)CC)C(C(C)=C=C)CCCCCC=C", 1),
+    ],
+)
+def test_decomposed_chain_name(parser, smiles, expected):
     (mol,) = parser.parse(smiles)
     iupac = Iupac(mol)
 
-    assert iupac.simple_chain_name(mol._atoms) == expected
+    names = iupac.subchain_simple_names()
+
+    for dec, connector, name in names:
+        print(name, connector, dec.chain)
