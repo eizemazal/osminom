@@ -47,39 +47,6 @@ def test_simple_chain_name(parser, smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
-        ("C", 1),
-        ("CCCCCCCC(C(C)CC)C(C(C)=C=C)CCCCCC=C", 1),
-    ],
-)
-def test_decomposed_chain_name(parser, smiles, expected):
-    (mol,) = parser.parse(smiles)
-    iupac = Iupac(mol)
-
-    names = iupac.subchain_simple_names()
-
-    for dec, connector, name in names:
-        print(name, connector, dec.chain)
-
-
-@pytest.mark.parametrize(
-    "smiles,expected",
-    [
-        ("CCC(C=C)CCCC", 1),
-    ],
-)
-def test_decomposed_chain_name(parser, smiles, expected):
-    (mol,) = parser.parse(smiles)
-    iupac = Iupac(mol)
-
-    names = iupac.subchain_simple_names()
-
-    for dec, connector, name in names:
-        print(name, connector, dec.chain)
-
-
-@pytest.mark.parametrize(
-    "smiles,expected",
-    [
         ("CCC(C)(C)CC", "3,3-dimethylpentane"),
         ("CC(C)CC(C)C", "2,4-dimethylpentane"),
         # Note here he found that it is hexane, ill provide numeration for clearance
@@ -89,6 +56,26 @@ def test_decomposed_chain_name(parser, smiles, expected):
     ],
 )
 def test_decomposed_multichain(parser, smiles, expected):
+    (mol,) = parser.parse(smiles)
+    iupac = Iupac(mol)
+
+    mol.print_table()
+    iupac.decomposition.print()
+
+    name = iupac.decompose_name(iupac.decomposition)
+    assert iupac2str(name) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("CCC(C)(C)CCC", "3,3-dimethylhexane"),
+        ("CCC(C)CC(C)CC", "3,5-dimethylheptane"),
+        ("CCC(C)C(C(C)CC)CCC", "3,5-dimethyl-4-propylheptane"),
+        ("CCC(C)C(C(C)C)C=C", "4-methyl-3-(propan-2yl)hexene"),
+    ],
+)
+def test_various_molecules(parser, smiles, expected):
     (mol,) = parser.parse(smiles)
     iupac = Iupac(mol)
 
