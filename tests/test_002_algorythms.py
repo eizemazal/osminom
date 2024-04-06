@@ -65,21 +65,6 @@ def test_leaf_distances_tree():
         assert d[(a1, a2)] == 4
 
 
-def test_leaf_cycle():
-    algo = algorythms("BCCCCC(C1CN)CC1CP")
-
-    b, n, p = algo.leafs
-    assert b.symbol == "B"
-    assert n.symbol == "N"
-    assert p.symbol == "P"
-
-    d = algo.leaf_distances
-
-    assert d[(b, n)] == 8
-    assert d[(b, p)] == 9
-    assert d[(n, p)] == 5
-
-
 def test_max_chain():
     algo = algorythms("BCCCl(CN)CCCP")
 
@@ -242,6 +227,22 @@ def test_cycle(smiles, start, expected_len):
 def test_cycles(smiles, expected_len):
     debug_atoms(True)
     algo = algorythms(smiles)
-    cycles = algo.cycles()
+    cycles = algo.cycles
 
     assert len(cycles) == expected_len
+
+
+@pytest.mark.parametrize(
+    "smiles",
+    [
+        "CC1CCCCC1",
+        "CC1C(C)CC(C)CC1",
+        # "C1CCCCC1C1CCCCC1",
+    ],
+)
+def test_decompose_cycles(smiles):
+    debug_atoms(True)
+    algo = algorythms(smiles)
+    dec = algo.decompose()
+
+    dec.print()

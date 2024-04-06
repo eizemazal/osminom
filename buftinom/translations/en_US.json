@@ -60,5 +60,10 @@
         "tetrakis": "tetrakis",
         "pentakis": "pentakis"
     },
+    "infix": {
+        "cyclo": "cyclo",
+        "spiro": "spiro",
+        "bicyclo": "bicyclo"
+    },
     "empty": ""
 }

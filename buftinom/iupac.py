@@ -8,6 +8,7 @@ from buftinom.lookup import (
     MULTI_BY_PREFIX,
     MULTI_MULTI_BY_PREFIX,
     ROOT_BY_LENGTH,
+    Infix,
     Prefix,
     PrimarySuffix,
     bond_prio_cmp,
@@ -212,10 +213,32 @@ class Iupac:
 
             yield AtomFeatures(i, a1, bond, decomposition.connections.get(a1, []))
 
+    def cycle_features(self, decomposition: MolDecomposition):
+        chain = decomposition.chain + (decomposition.chain[0],)
+
+        for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
+            bond = self.mol.bonds[(a1, a2)]
+
+            yield AtomFeatures(i, a1, bond, decomposition.connections.get(a1, []))
+
+    def fpod_cycle(self, decomposition: MolDecomposition):
+        features = self.cycle_features(decomposition)
+
+        return decomposition, features, FpodReliability.RELIABLE
+
     def fpod(self, decomposition: MolDecomposition):
+        """First point of difference
+
+        Should return correctly oriented decomposition
+        """
+        # if decomposition.is_cycle:
+        #     return self.fpod_cycle(decomposition)
+
         straight = decomposition
         reverse = MolDecomposition(
-            tuple(reversed(straight.chain)), straight.connections
+            tuple(reversed(straight.chain)),
+            straight.connections,
+            is_cycle=straight.is_cycle,
         )
 
         straight_features = list(self.features(straight))
@@ -295,12 +318,13 @@ class Iupac:
 
         root = ROOT_BY_LENGTH[len(decomp.chain)].value
         suffix = self.suffixes_by_features(features, primary=primary)
+        infix = Infix.CYCLO.value if decomp.is_cycle else None
         subsuff = Prefix.YL.value if not primary else None
         preffix = self.preffixes_by_features(features)
 
         return IupacName(
             prefixes=preffix,
-            infix=None,
+            infix=infix,
             root_word=root,
             prime_suffixes=suffix,
             sub_suffix=subsuff,

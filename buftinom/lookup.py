@@ -42,6 +42,12 @@ class PrimarySuffix(Enum):
     ENYNE = _("psuffix.enyne", short=True)
 
 
+class Infix(Enum):
+    CYCLO = _("infix.cyclo")
+    SPIRO = _("infix.spiro")
+    BICYCLO = _("infix.bicyclo")
+
+
 class Prefix(Enum):
     YL = _("prefix.yl")
 

@@ -96,3 +96,23 @@ def test_various_molecules(parser, smiles, expected):
 
     name = iupac.decompose_name(iupac.decomposition)
     assert iupac2str(name) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles, expected",
+    [
+        ("CC1CCCCC1", "1-methylcyclohexane"),
+        # ("C1CC(C)CCC1", "1-methylcyclohexane"),
+        ("C1CCCCC1C", "1-methylcyclohexane"),
+        ("CC1C(C)CC(C)CC1", "1,2,4-trimethylcyclohexane"),
+    ],
+)
+def test_cycle_names(parser, smiles, expected):
+    (mol,) = parser.parse(smiles)
+    iupac = Iupac(mol)
+
+    mol.print_table()
+    iupac.decomposition.print()
+
+    name = iupac.decompose_name(iupac.decomposition)
+    assert iupac2str(name) == expected

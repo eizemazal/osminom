@@ -118,6 +118,11 @@ class Molecule:
             print()
         print()
 
+    def __str__(self):
+        return f"Molecule({len(self._atoms)} atoms, {len(self._bonds) // 2} bonds)"
+
+    __repr__ = __str__
+
 
 class MoleculeConstructor(Molecule):
     def __init__(self):
@@ -219,11 +224,6 @@ class MoleculeConstructor(Molecule):
             unique_used.add((a1, a2))
             unique_used.add((a2, a1))
             yield a1, b, a2
-
-    def __str__(self):
-        return f"Molecule({len(self._atoms)} atoms, {len(self._bonds)} bonds)"
-
-    __repr__ = __str__
 
 
 def _scenter(obj, w):

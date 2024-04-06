@@ -38,6 +38,7 @@ class MolDecomposition:
     chain: Chain
     connections: dict[Atom, list["MolDecomposition"]]
     fpod: FpodReliability = FpodReliability.UNKNOWN
+    is_cycle: bool = False
 
     def print(self, level=0):
         print(self.chain)
@@ -90,7 +91,25 @@ class Alogrythms:
         if len(self.mol.atoms) == 1:
             return [self.mol.atoms[0]]
 
-        return [a for a, lst in self.adj.items() if len(lst) == 1]
+        cycles = self.cycles
+        cycle_atoms = set()
+        for cycle in cycles:
+            cycle_atoms |= set(cycle)
+
+        leafs = []
+        for atom, connections in self.adj.items():
+            if atom in cycle_atoms:
+                continue
+            noncyclic_conns = set(connections).difference(cycle_atoms)
+            if len(noncyclic_conns) <= 1:
+                leafs.append(atom)
+
+        # Take one point from the cycle
+        # so we can track chainded connections from the leafs and the cycles
+        for cycle in cycles:
+            leafs.append(cycle[0])
+
+        return leafs
 
     def cycle_exists(self, cycle_matchers: list[set[Atom]], cycle_atoms: set[Atom]):
         for matcher in cycle_matchers:
@@ -99,8 +118,9 @@ class Alogrythms:
 
         return False
 
+    @cached_property
     def cycles(self) -> list[Chain]:
-        """DFS"""
+        """BFS/ modified Johnson's algorithm for undirected graph"""
         adj = self.adj
         atoms = self.mol.atoms
         adjset = {atom: set(connections) for atom, connections in adj.items()}
@@ -186,6 +206,7 @@ class Alogrythms:
         return []
 
     def unfold_cycle(self, predc: dict[Atom:Atom], start: Atom, end: Atom) -> Chain:
+        """Since we use bfs cycle will look like a collar"""
         left = [end]
         right = [start]
 
@@ -214,6 +235,16 @@ class Alogrythms:
 
         path = left + reversechain(right) + [last_common_node]
         return path
+
+    def max_cycle(self, cycles: list[Chain]) -> Chain:
+        maxlen = max(len(c) for c in cycles)
+        by_length = [c for c in cycles if len(c) == maxlen]
+        # if len(by_length) == 1:
+        #     return by_length[0]
+        # if aromatic - better
+        # if func group - even better
+        # now only len
+        return by_length[0]
 
     @lru_cache(maxsize=256)
     def distances_from(self, start: Atom):
@@ -256,6 +287,11 @@ class Alogrythms:
         leafs = self.leafs
         leaf_distances: dict[ChainKey, float] = {}
 
+        if len(leafs) == 1:
+            leaf = [leafs[0]]
+            self.chains.append(leaf)
+            return {chainkey(leaf): 0}
+
         for a1 in leafs:
             a1_distances, a1_predecessors = self.distances_from(a1)
 
@@ -277,6 +313,9 @@ class Alogrythms:
         return self.chains
 
     def max_chains(self, chains: list[Chain]) -> list[Chain]:
+        if not chains:
+            return []
+
         maxlen = len(max(chains, key=len))
         return [chain for chain in chains if len(chain) == maxlen]
 
@@ -379,8 +418,42 @@ class Alogrythms:
 
         return [g.chains for g in groups]
 
+    def assert_not_implemented(self, cycles: list[Chain]):
+        # level 1
+        if len(cycles) > 1:
+            raise AssertionError("Multiple cycles is not implemented")
+
+        # level 2
+        for i, c1 in enumerate(cycles):
+            for j, c2 in enumerate(cycles):
+                if i == j:
+                    continue
+                if set(c1) & set(c2):
+                    raise AssertionError(
+                        f"Intersecting cycles are not implemented \n{c1} \n{c2}"
+                    )
+
     def decompose(self):
         chains = self.all_chains
+        cycles = self.cycles
+        self.assert_not_implemented(cycles)
+
+        def _decompose_cycles(chains: list[Chain], cycles: list[Chain]):
+            if not cycles:
+                return _decompose(chains)
+
+            connections: dict[Atom, list[Chain]] = defaultdict(list)
+
+            max_cycle = self.max_cycle(cycles)
+
+            subchains = self.stripchains(chains, max_cycle)
+            groupped = self.group_by_ends(subchains)
+
+            for connection, groupped_chains in groupped.items():
+                for chaingroup in self.interconneced(groupped_chains):
+                    connections[connection].append(_decompose(chaingroup))
+
+            return MolDecomposition(tuple(max_cycle), connections, is_cycle=True)
 
         def _decompose(chains: list[Chain]):
             connections: dict[Atom, list[Chain]] = defaultdict(list)
@@ -395,4 +468,4 @@ class Alogrythms:
 
             return MolDecomposition(tuple(max_chain), connections)
 
-        return _decompose(chains)
+        return _decompose_cycles(chains, cycles)
