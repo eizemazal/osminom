@@ -34,6 +34,7 @@ def parser():
         ("CCC=CC#CC", "hept-4-en-2-yne"),
         #
         ("C=C#C", "propen-2-yne"),
+        ("CC=C=CC", "pent-2,3-diene"),
     ],
 )
 def test_simple_chain_name(parser, smiles, expected):

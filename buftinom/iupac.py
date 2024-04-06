@@ -82,14 +82,34 @@ class IupacName:
         )
 
 
+def singleidx2str(name: WordForm, idx: int):
+    if idx > 1:
+        return ["-", str(idx), "-", name.short]
+    else:
+        return [name.short]
+
+
+def manyidx2str(name: WordForm, ids: list[int]):
+    index = ",".join(map(str, ids))
+    multi = MULTI_BY_PREFIX.get(len(ids))
+    return ["-", index, "-", multi.value.norm, name.short]
+
+
 def suffixes2str(suffixes: list[Synt], sub_suffix: WordForm):
     res: list[str] = []
+
     ssuff: list[Synt] = sorted(suffixes, key=lambda s: s.value)
-    for idx, name in ssuff:
-        if idx > 1:
-            res.extend(["-", str(idx), "-", name.short])
+
+    groupped: dict[str, list[WordForm]] = defaultdict(list)
+    for idx, name in suffixes:
+        groupped[name].append(idx)
+
+    groups = sorted(groupped.items(), key=lambda g: g[0])
+    for name, ids in groups:
+        if len(ids) > 1:
+            res.extend(manyidx2str(name, ids))
         else:
-            res.append(name.short)
+            res.extend(singleidx2str(name, ids[0]))
 
     if sub_suffix:
         res.extend(sub_suffix.norm)
