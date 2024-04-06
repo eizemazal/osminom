@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from functools import cached_property
 from typing import Literal
 
 DEBUG_ATOMS = False
@@ -101,6 +102,21 @@ class Molecule:
     def atom(self, symbol: str):
         """find first atom by symbol, for test purposes"""
         return [a for a in self._atoms if a.symbol == symbol][0]
+
+    def table2list(self):
+        adj_list: dict[Atom, list[Atom]] = {}
+
+        for a in self._atoms:
+            adj_list[a] = []
+
+        for a1, a2 in self.bonds.keys():
+            adj_list[a1].append(a2)
+
+        return adj_list
+
+    @cached_property
+    def adj(self):
+        return self.table2list()
 
     def print_table(self):
         w = max(len(str(a)) for a in self._atoms) + 2

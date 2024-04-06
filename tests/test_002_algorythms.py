@@ -246,3 +246,21 @@ def test_decompose_cycles(smiles):
     dec = algo.decompose()
 
     dec.print()
+
+
+@pytest.mark.parametrize(
+    "smiles",
+    [
+        "CCC(=O)O",
+        "CCCO",
+        "CC(O)C",
+        # NH2 by default
+        "CCCN",
+    ],
+)
+def test_functional_groups(smiles):
+    debug_atoms(True)
+    algo = algorythms(smiles)
+    dec = algo.decompose()
+
+    dec.print()

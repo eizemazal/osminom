@@ -42,6 +42,18 @@ class PrimarySuffix(Enum):
     ENYNE = _("psuffix.enyne", short=True)
 
 
+class FunctionalGroup(Enum):
+    CARBOXYLIC = _("functional-group.carboxylic-acid")
+    AMIDE = _("functional-group.amide")
+    NITRITE = _("functional-group.nitrite")
+    ALDEHYDE = _("functional-group.al")
+    KETONE = _("functional-group.one")
+    ALCOHOL = _("functional-group.ol")
+    THIOL = _("functional-group.thiol")
+    AMINE = _("functional-group.amine")
+    IMINE = _("functional-group.imine")
+
+
 class Infix(Enum):
     CYCLO = _("infix.cyclo")
     SPIRO = _("infix.spiro")

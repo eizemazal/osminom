@@ -47,6 +47,17 @@
             "short": "enyne"
         }
     },
+    "functional-group": {
+        "carboxylic-acid": "oic acid",
+        "amide": "amide",
+        "nitrite": "nitrite",
+        "al": "al",
+        "one": "one",
+        "ol": "ol",
+        "thiol": "thiol",
+        "amine": "amine",
+        "imine": "imine"
+    },
     "prefix": {
         "yl": "yl"
     },
