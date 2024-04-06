@@ -421,14 +421,11 @@ def preffixes2str(iupac: IupacName):
 
     res: list[str] = []
 
-    multiselector = MULTI_BY_PREFIX
-
     for name, indexes in ordered:
         subname: list[str] = []
 
         name_complex = name[0].isdigit()
-        if name_complex:
-            multiselector = MULTI_MULTI_BY_PREFIX
+        multiselector = MULTI_MULTI_BY_PREFIX if name_complex else MULTI_BY_PREFIX
 
         if indexes:
             indexes = list(map(str, sorted(indexes)))
@@ -493,16 +490,22 @@ class Iupac:
         nbonds = 0
         rel = FpodReliability.RELIABLE
 
-        for fstraight, freversed in zip(straight_features, reverse_features):
-            sub_strait = len(fstraight.subchains)
-            sub_revers = len(freversed.subchains)
+        subchain_choise = None
 
+        for fstraight, freversed in zip(straight_features, reverse_features):
             # First subchain
-            subchain_cmp = sub_strait - sub_revers
-            if subchain_cmp > 0:
-                return straight, straight_features, rel
-            if subchain_cmp < 0:
-                return reverse, reverse_features, rel
+            # Do not return immediately, bonds have higher priority
+            if subchain_choise is None:
+                sub_strait = len(fstraight.subchains)
+                sub_revers = len(freversed.subchains)
+
+                subchain_cmp = sub_strait - sub_revers
+                if subchain_cmp > 0:
+                    subchain_choise = straight, straight_features, rel
+                if subchain_cmp < 0:
+                    subchain_choise = reverse, reverse_features, rel
+
+                nsubchains += sub_strait
 
             # First posin of unsaturation
             bond_cmp = bond_prio_cmp(fstraight.bond_ahead, freversed.bond_ahead)
@@ -511,9 +514,11 @@ class Iupac:
             if bond_cmp < 0:
                 return reverse, reverse_features, rel
 
-            nsubchains += sub_strait
             if fstraight.bond_ahead.type != BondType.SINGLE:
                 nbonds += 1
+
+        if subchain_choise is not None:
+            return subchain_choise
 
         if nbonds + nsubchains > 0:
             rel = FpodReliability.UNSURE
