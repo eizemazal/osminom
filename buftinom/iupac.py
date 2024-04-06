@@ -1,10 +1,12 @@
 import heapq
 from collections import defaultdict
 from dataclasses import dataclass, field
+from enum import Enum
 from functools import cached_property, lru_cache
 from typing import Generator, NamedTuple, TypeAlias
 
 from buftinom.lookup import (
+    BOND_PRIORITY,
     MULTI_BY_PREFIX,
     MULTI_MULTI_BY_PREFIX,
     ROOT_BY_LENGTH,
@@ -32,10 +34,17 @@ def reversechain(chain: Chain) -> Chain:
     return list(reversed(chain))
 
 
-@dataclass(frozen=True)
+class FpodReliability(Enum):
+    UNKNOWN = "Unknown"
+    UNSURE = "Unsure"
+    RELIABLE = "100%"
+
+
+@dataclass
 class MolDecomposition:
     chain: Chain
     connections: dict[Atom, list["MolDecomposition"]]
+    fpod: FpodReliability = FpodReliability.UNKNOWN
 
     def print(self, level=0):
         print(self.chain)
@@ -155,12 +164,22 @@ class Alogrythms:
         maxlen = len(max(chains, key=len))
         return [chain for chain in chains if len(chain) == maxlen]
 
+    def chain_priority(self, chain: Chain):
+        if len(chain) < 2:
+            return 0
+
+        prio = 0
+        for a1, a2 in zip(chain, chain[1:]):
+            bond = self.mol.bonds[(a1, a2)]
+            prio += BOND_PRIORITY.get(bond.type, 0)
+        return prio
+
     def max_chain(self, chains: list[Chain]) -> Chain:
         max_chains = self.max_chains(chains)
-        # assert len(max_chains) == 1, "Not implemented for multiple max chains"
-        # first is ok for not but there are priorities
-        max_chain = max_chains[0]
-        return max_chain
+        #
+        max_prio = max(max_chains, key=self.chain_priority)
+        #
+        return max_prio
 
     def orient_by_leafs(self, chains: list[Chain]) -> list[Chain]:
         leafs = self.leafs
@@ -205,9 +224,6 @@ class Alogrythms:
                     break
 
                 buffer = []
-
-            if buffer:
-                print(buffer)
 
         return splits
 
@@ -312,6 +328,8 @@ class IupacName:
     sub_suffix: WordForm = None
     func_suffix: WordForm = None
 
+    ref: MolDecomposition
+
     def __repr__(self):
         return "".join(
             map(
@@ -345,13 +363,54 @@ def suffixes2str(suffixes: list[Synt], sub_suffix: WordForm):
     return "".join(res)
 
 
-def preffixes2str(preffixes: list[Subn]):
+def revsubnames(chain_len: int, subnames: list[tuple[int, str]]):
+    for idx, name in subnames:
+        yield chain_len - idx + 1, name
+
+
+def fpod2(chain_len: int, subnames: list[tuple[int, str]]):
+    """First point of difference second round to find weher we need to reverse chain
+    with a new information about the names of the subchains.
+
+    By this time we know that we really need this info
+    to resolve possible collisions (see Iupac.fpod)
+    """
+    idmap = defaultdict(list)
+    for idx, name in subnames:
+        idmap[idx].append(name)
+
+    for idx in idmap.keys():
+        idmap[idx] = tuple(sorted(idmap[idx]))
+
+    for idx in sorted(idmap.keys()):
+        rev_idx = chain_len - idx + 1
+
+        cur = idmap[idx]
+        rev = idmap.get(rev_idx, None)
+        if not rev:
+            return subnames
+
+        if cur < rev:
+            # all good, alphabetical order
+            return subnames
+
+        if cur > rev:
+            # 🔥 Collision, reverse indexing have better alphabetical order
+            return list(revsubnames(chain_len, subnames))
+
+    return subnames
+
+
+def preffixes2str(iupac: IupacName):
+    preffixes = iupac.prefixes
     if not preffixes:
         return None
 
     #
     subnames = [(idx, iupac2str(subn)) for idx, subn in preffixes]
     #
+    if iupac.ref.fpod != FpodReliability.RELIABLE:
+        subnames = fpod2(len(iupac.ref.chain), subnames)
 
     groups: dict[str, list[int]] = defaultdict(list)
 
@@ -395,7 +454,7 @@ def preffixes2str(preffixes: list[Subn]):
 
 
 def iupac2str(iupac: IupacName):
-    preffix = preffixes2str(iupac.prefixes)
+    preffix = preffixes2str(iupac)
     infix = iupac.infix
     root = iupac.root_word.norm
     suffix = suffixes2str(iupac.prime_suffixes, iupac.sub_suffix)
@@ -430,6 +489,10 @@ class Iupac:
         straight_features = list(self.features(straight))
         reverse_features = list(self.features(reverse))
 
+        nsubchains = 0
+        nbonds = 0
+        rel = FpodReliability.RELIABLE
+
         for fstraight, freversed in zip(straight_features, reverse_features):
             sub_strait = len(fstraight.subchains)
             sub_revers = len(freversed.subchains)
@@ -437,18 +500,25 @@ class Iupac:
             # First subchain
             subchain_cmp = sub_strait - sub_revers
             if subchain_cmp > 0:
-                return straight, straight_features
+                return straight, straight_features, rel
             if subchain_cmp < 0:
-                return reverse, reverse_features
+                return reverse, reverse_features, rel
 
             # First posin of unsaturation
             bond_cmp = bond_prio_cmp(fstraight.bond_ahead, freversed.bond_ahead)
             if bond_cmp > 0:
-                return straight, straight_features
+                return straight, straight_features, rel
             if bond_cmp < 0:
-                return reverse, reverse_features
+                return reverse, reverse_features, rel
 
-        return straight, straight_features
+            nsubchains += sub_strait
+            if fstraight.bond_ahead.type != BondType.SINGLE:
+                nbonds += 1
+
+        if nbonds + nsubchains > 0:
+            rel = FpodReliability.UNSURE
+
+        return straight, straight_features, rel
 
     def chain_name(decomp: MolDecomposition, features: list[AtomFeatures]):
         pass
@@ -480,7 +550,8 @@ class Iupac:
         return result
 
     def decompose_name(self, decomposition: MolDecomposition, *, primary: bool = True):
-        decomp, features = self.fpod(decomposition)
+        decomp, features, reliability = self.fpod(decomposition)
+        decomp.fpod = reliability
 
         root = ROOT_BY_LENGTH[len(decomp.chain)].value
         suffix = self.suffixes_by_features(features, primary=primary)
@@ -494,4 +565,5 @@ class Iupac:
             prime_suffixes=suffix,
             sub_suffix=subsuff,
             func_suffix=None,
+            ref=decomp,
         )

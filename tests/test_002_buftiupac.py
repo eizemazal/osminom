@@ -72,7 +72,10 @@ def test_decomposed_multichain(parser, smiles, expected):
         ("CCC(C)(C)CCC", "3,3-dimethylhexane"),
         ("CCC(C)CC(C)CC", "3,5-dimethylheptane"),
         ("CCC(C)C(C(C)CC)CCC", "3,5-dimethyl-4-propylheptane"),
-        ("CCC(C)C(C(C)C)C=C", "4-methyl-3-(propan-2yl)hexene"),
+        ("CCC(C)C(C(C)C)C=C", "3-(1-methylethyl)-4-methylhexene"),
+        ("CCC(C)C(C(C)CC)C=C", "4-ethenyl-3,5-dimethylheptane"),
+        ("CCC(C)C(C)CCCCC(C)C", "2,7,8-trimethyldecane"),
+        ("CCCC(C)C(CC)CCC", "4-ethyl-5-methyloctane"),
     ],
 )
 def test_various_molecules(parser, smiles, expected):
