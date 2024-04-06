@@ -1,7 +1,7 @@
 import pytest
 
 from buftinom.algorythms import Alogrythms, Chain, MolDecomposition, chainkey
-from buftinom.smileg import Atom
+from buftinom.smileg import Atom, debug_atoms
 from buftinom.smiles_parser import SmilesParser
 
 
@@ -203,3 +203,45 @@ def test_decomps_print():
     )
 
     dec.print()
+
+
+@pytest.mark.parametrize(
+    "smiles, start, expected_len",
+    [
+        ("CCCCCCCCCCCC", "C", 0),
+        ("C", "C", 0),
+        ("C1C1", "C", 0),
+        ("C1CC1", "C", 3),
+        ("C1CCCCC1", "C", 6),
+        # with subchains
+        ("CC1CCCCC1", "C", 6),
+        ("CCCC1CCCCC1", "C", 6),
+        ("CC1CCCCC1CC", "C", 6),
+        ("CC1CC(CCC)CCC1CC", "C", 6),
+        # inside the circle
+        ("CCCC1CBCCC1", "B", 6),
+    ],
+)
+def test_cycle(smiles, start, expected_len):
+    debug_atoms(True)
+    algo = algorythms(smiles)
+    cycle = algo.shortest_cycle(algo.adj, algo.mol.atom(start))
+    print(cycle)
+    assert len(cycle) == expected_len, cycle
+
+
+@pytest.mark.parametrize(
+    "smiles, expected_len",
+    [
+        ("CC1CCCCC1", 1),
+        ("C1CCCCC1C1CCCCC1", 2),
+        # just plot it :D
+        ("C1CCB3P1CCCCCCCCCCCCCCCCCCCCCCCI2CCCCN2CCCCCCCCCCCCCCCCCCCCCCCC3", 3),
+    ],
+)
+def test_cycles(smiles, expected_len):
+    debug_atoms(True)
+    algo = algorythms(smiles)
+    cycles = algo.cycles()
+
+    assert len(cycles) == expected_len

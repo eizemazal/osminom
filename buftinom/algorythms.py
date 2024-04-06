@@ -1,5 +1,5 @@
 import heapq
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property, lru_cache
@@ -74,7 +74,7 @@ class Alogrythms:
         self.chains: list[Chain] = []
 
     def table2list(self):
-        adj_list = defaultdict(list)
+        adj_list: dict[Atom, list[Atom]] = defaultdict(list)
 
         for a1, a2 in self.mol.bonds.keys():
             adj_list[a1].append(a2)
@@ -91,6 +91,129 @@ class Alogrythms:
             return [self.mol.atoms[0]]
 
         return [a for a, lst in self.adj.items() if len(lst) == 1]
+
+    def cycle_exists(self, cycle_matchers: list[set[Atom]], cycle_atoms: set[Atom]):
+        for matcher in cycle_matchers:
+            if cycle_atoms == matcher:
+                return True
+
+        return False
+
+    def cycles(self) -> list[Chain]:
+        """DFS"""
+        adj = self.adj
+        atoms = self.mol.atoms
+        adjset = {atom: set(connections) for atom, connections in adj.items()}
+
+        visited: set[Atom] = set()
+        saturated: set[Atom] = set()
+
+        cycles: list[Chain] = []
+        cycle_matchers: list[set[Atom]] = []
+
+        for atom in atoms:
+            cycle = self.shortest_cycle(
+                adj,
+                atom,
+                ignore_start=visited,
+                always_ignore=saturated,
+            )
+            cycle_atoms = set(cycle)
+
+            if not cycle:
+                continue
+
+            if self.cycle_exists(cycle_matchers, cycle_atoms):
+                continue
+
+            cycle_matchers.append(cycle_atoms)
+            cycles.append(cycle)
+
+            visited.add(atom)
+            visited |= cycle_atoms
+
+            for c in cycle + [atom]:
+                if c in saturated:
+                    continue
+
+                if len(adjset[c].difference(visited)) == 0:
+                    # No more visits for atoms which all connections
+                    # Already been processed
+                    saturated.add(c)
+
+        return cycles
+
+    def shortest_cycle(
+        self,
+        graph: dict[Atom, list[Atom]],
+        start: Atom,
+        ignore_start: set[Atom] = None,
+        always_ignore: set[Atom] = None,
+    ) -> Chain:
+        """bfs"""
+        if always_ignore is None:
+            always_ignore = set()
+
+        queue = deque([(start, None)])
+        visited = {start}
+        predecessor: dict[Atom : Atom | None] = {start: None}
+
+        while queue:
+            current_vertex, parent = queue.popleft()
+
+            neighbors = graph[current_vertex]
+
+            # do not start with paths that already been traversed
+            if ignore_start:
+                nbset = set(neighbors)
+                allowed_starts = nbset.difference(ignore_start)
+                neighbors = allowed_starts
+                ignore_start = None
+
+            for neighbor in neighbors:
+                if neighbor in always_ignore:
+                    continue
+
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    #
+                    predecessor[neighbor] = current_vertex
+                    queue.append((neighbor, current_vertex))
+                elif neighbor != parent and parent is not None:
+                    # Found a cycle, now reconstruct it
+                    return self.unfold_cycle(predecessor, neighbor, current_vertex)
+
+        return []
+
+    def unfold_cycle(self, predc: dict[Atom:Atom], start: Atom, end: Atom) -> Chain:
+        left = [end]
+        right = [start]
+
+        while predc[left[-1]] != None:
+            left.append(predc[left[-1]])
+
+        while predc[right[-1]] != None:
+            right.append(predc[right[-1]])
+
+        left = reversechain(left)
+        right = reversechain(right)
+        last_common_node = left[0]
+        assert right[0] == last_common_node
+
+        strip_tail_index = 0
+        for idx, (l, r) in enumerate(zip(left, right)):
+            if l == r:
+                last_common_node = l
+                continue
+
+            strip_tail_index = idx
+            break
+
+        left = left[strip_tail_index:]
+        right = right[strip_tail_index:]
+
+        path = left + reversechain(right) + [last_common_node]
+        return path
 
     @lru_cache(maxsize=256)
     def distances_from(self, start: Atom):
@@ -117,12 +240,12 @@ class Alogrythms:
 
         return distances, predecessors
 
-    def unfold_chain(self, predecessors, start, end) -> Chain:
+    def unfold_chain(self, predc: dict[Atom:Atom], start: Atom, end: Atom) -> Chain:
         path = []
         node = end
         while node is not None:
             path.append(node)
-            node = predecessors[node]
+            node = predc[node]
 
         path.reverse()
         return path if path[0] == start else []
@@ -234,6 +357,7 @@ class Alogrythms:
         return grouped
 
     def interconneced(self, chains: list[Chain]) -> list[list[Chain]]:
+        """Split chains by in graph components they in"""
         if len(chains) == 1:
             return [chains]
         first_chain, *chains = chains

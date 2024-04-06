@@ -2,6 +2,14 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
 
+DEBUG_ATOMS = False
+
+
+def debug_atoms(debug: bool):
+    """Wether to print atom id in __str__ and __repr__"""
+    global DEBUG_ATOMS
+    DEBUG_ATOMS = True
+
 
 @dataclass(slots=True, frozen=True)
 class Atom:
@@ -27,6 +35,9 @@ class Atom:
                 charge = charge.replace("1", "")
             return f"[{isotope}{self.symbol}{chirality}{hydrogens}{charge}]"
 
+        if DEBUG_ATOMS:
+            return f"{self.symbol}'{self.id}"
+
         return self.symbol
 
     __repr__ = __str__
@@ -35,7 +46,9 @@ class Atom:
         return id(self.id)
 
     def __eq__(self, other):
-        return self.id == other.id
+        if isinstance(other, Atom):
+            return self.id == other.id
+        return False
 
     def __lt__(self, other):
         return self.id < other.id
