@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Iterator
 from dataclasses import dataclass, field
 from osminom.atom import Atom
-
+from copy import deepcopy
 
 @dataclass
 class AstNode:
@@ -81,6 +81,23 @@ class Ast:
         node.append_child(rhs.root, bond)
         return self
 
+    def append_multiple(self, rhs_base: Ast, to: list[str] | None = None, bond: str = "-") -> Ast:
+        if rhs_base.root is None:
+            return self
+        nodes = [self.root] if to is None else self.find_multiple_labels(to)
+        # print(nodes)
+        if not nodes:
+            raise ValueError(f"Label {to} undefined for the parent structure.")
+
+        for node in nodes:
+            rhs = deepcopy(rhs_base)
+            if rhs.root_stack:
+                rhs.rebase(rhs.root_stack[0])
+                rhs.root = rhs.root_stack[0]
+            rhs.clearlabels()
+            node.append_child(rhs.root, bond)
+        return self
+
     def extend(self, atom: Atom, bond: str = "-") -> Ast:
         node = AstNode(atom=atom)
         node.append_child(self.root)
@@ -105,6 +122,9 @@ class Ast:
 
     def find_all(self, selector_fn: callable[[AstNode], bool]) -> list[AstNode]:
         return [node for node in self.root.traverse() if selector_fn(node)]
+
+    def find_multiple_labels(self, labels: list[str]) -> list[AstNode]:
+        return [self.find(lambda x: x.atom.label == str(label)) for label in labels]
 
     def rebase(self, node: AstNode) -> Ast:
         nodes_to_root = list(node.traverse_up())

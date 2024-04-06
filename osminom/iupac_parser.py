@@ -36,11 +36,11 @@ class IupacParser:
         """
         match len(p):
             case 3:
-                p[0] = p[2].append(p[1])
+                p[0] = p[2].append_multiple(p[1])
             case 4:
-                p[0] = p[3].append(p[2], p[1])
+                p[0] = p[3].append_multiple(p[2], p[1])
             case 5:
-                p[0] = p[4].append(p[2], p[1])
+                p[0] = p[4].append_multiple(p[2], p[1])
 
     def p_lform(self, p):
         """lform : radical
@@ -50,9 +50,9 @@ class IupacParser:
         if len(p) == 2:
             p[0] = p[1]
         if len(p) == 3:
-            p[0] = p[2].append(p[1])
+            p[0] = p[2].append_multiple(p[1])
         elif len(p) == 4:
-            p[0] = p[3].append(p[2], to=p[1])
+            p[0] = p[3].append_multiple(p[2], to=p[1])
 
     def p_lform_brackets(self, p):
         """lform : '(' lform ')'"""
@@ -66,9 +66,14 @@ class IupacParser:
         """radical : chain YL"""
         p[0] = p[1].rebase(p[1].find(lambda x: x.atom.label == "1"))
 
-    def p_llocant(self, p):
-        """llocant : INT DASH"""
-        p[0] = int(p[1])
+    def p_llocant_comma(self, p):
+        """llocant : INT COMMA llocant"""
+        p[0] = [int(p[1])] + p[3]
+
+    def p_llocant_dash_numprfx(self, p):
+        """llocant : INT DASH NUMPRFXFORM
+                   | INT DASH"""
+        p[0] = [int(p[1])]
 
     def p_error(self, p):
         print("Syntax error")

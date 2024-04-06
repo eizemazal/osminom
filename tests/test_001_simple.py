@@ -101,8 +101,8 @@ def test_nested_lform(parser):
     mol = parser.parse("(2-(метиламино)этил)бензол")
     assert mol.smiles == "CNCCc1ccccc1"
 
-    mol = parser.parse("(2-(метиламино)этил)бензол")
-    assert mol.smiles == "CNCCc1ccccc1"
+    # mol = parser.parse("(2-(метиламино)этил)бензол")
+    # assert mol.smiles == "CNCCc1ccccc1"
 
     # mol = parser.parse("(2-(4-гидроксифенил)винил)этанол")
     # assert mol.smiles == "CNCCc1ccccc1"
@@ -110,6 +110,16 @@ def test_nested_lform(parser):
     # mol = parser.parse("гидроксиэтиламин")
     # assert mol.smiles == "OCCN"
 
+
+def test_multiprefixes(parser):
+    mol = parser.parse("1,2,2-трихлорбутан")
+    assert mol.smiles == "CCC(Cl)(Cl)CCl"
+
+    mol = parser.parse("5,5-диэтилциклогексан")
+    assert mol.smiles == "CCC(CC)(C1)CCCC1"
+
+    mol = parser.parse("1-(2,2-ди(2,4-дигидроксифенил)винил)этанол")
+    assert mol.smiles == "Oc(c1)cc(O)cc1C(=C)(C(O)C)c1cc(O)cc(c1)O"
 
 # def test_suffixes(parser):
 #    mol = parser.parse("метанол")
