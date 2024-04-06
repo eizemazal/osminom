@@ -1,6 +1,6 @@
 import pytest
 
-from buftinom.iupac import Alogrythms, Chain, MolDecomposition, chainkey
+from buftinom.algorythms import Alogrythms, Chain, MolDecomposition, chainkey
 from buftinom.smileg import Atom
 from buftinom.smiles_parser import SmilesParser
 
