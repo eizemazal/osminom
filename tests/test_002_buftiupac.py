@@ -1,7 +1,10 @@
 import pytest
 
 from buftinom.iupac import Iupac, iupac2str
+from buftinom.smileg import debug_atoms
 from buftinom.smiles_parser import SmilesParser
+
+debug_atoms(True)
 
 
 @pytest.fixture
@@ -72,6 +75,7 @@ def test_decomposed_multichain(parser, smiles, expected):
     [
         ("CCC(C)(C)CCC", "3,3-dimethylhexane"),
         ("CCC(C)CC(C)CC", "3,5-dimethylheptane"),
+        ("CCCCC(C(C)C)CCCCC", "5-(1-methylethyl)decane"),
         ("CCC(C)C(C(C)CC)CCC", "3,5-dimethyl-4-propylheptane"),
         ("CCC(C)C(C(C)C)C=C", "3-(1-methylethyl)-4-methylhexene"),
         ("CCC(C)C(C(C)CC)C=C", "4-ethenyl-3,5-dimethylheptane"),
@@ -117,3 +121,23 @@ def test_cycle_names(parser, smiles, expected):
 
     name = iupac.decompose_name(iupac.decomposition)
     assert iupac2str(name) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("CCC(C)(C)CC", "3,3-dimethylpentane"),
+        ("CC(C)CC(C)C", "2,4-dimethylpentane"),
+        ("CCCCC(CC)C(C)CCC", "5-ethyl-4-methylnonane"),
+        ("CCCCCC(C(C)C(C)CC)C(CC)CCCC", "6-(1,2-dimethylbutyl)-5-ethylundecane"),
+    ],
+)
+def test_decomposed_pref(parser, smiles, expected):
+    (mol,) = parser.parse(smiles)
+    iupac = Iupac(mol)
+
+    mol.print_table()
+    iupac.decomposition.print()
+
+    name = iupac.decompose_name(iupac.decomposition)
+    print(name)

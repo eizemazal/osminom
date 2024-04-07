@@ -77,10 +77,15 @@ class MultiplyingPrefix(Enum):
     PENTAKIS = _("multiplying.pentakis")
 
 
+class Alphabet(Enum):
+    MIN = _("alphabet.min")
+    MAX = _("alphabet.max")
+
+
 BOND_PRIORITY = {
-    BondType.SINGLE: 1,
-    BondType.DOUBLE: 3,
-    BondType.TRIPLE: 2,
+    BondType.SINGLE: 10,
+    BondType.DOUBLE: 30,
+    BondType.TRIPLE: 20,
 }
 
 

@@ -1,4 +1,8 @@
 {
+    "alphabet": {
+        "min": "A",
+        "max": "z"
+    },
     "root": {
         "meth": "meth",
         "eth": "eth",

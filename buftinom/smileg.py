@@ -1,4 +1,3 @@
-from ast import TypeAlias
 from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property
@@ -70,7 +69,7 @@ class BondType(Enum):
     __repr__ = __str__
 
 
-BondSymbol: TypeAlias = Literal["-", "=", "#", ":", "/", "\\"]
+type BondSymbol = Literal["-", "=", "#", ":", "/", "\\"]
 
 
 @dataclass(slots=True, eq=True, frozen=True, unsafe_hash=True)

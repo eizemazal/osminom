@@ -1,28 +1,27 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from functools import cached_property
-from typing import NamedTuple
+from functools import cached_property, partial
+from typing import Callable, NamedTuple
 
-from buftinom.algorythms import Alogrythms, FpodReliability, MolDecomposition
+from buftinom.algorythms import (
+    Alogrythms,
+    Chain,
+    MolDecomposition,
+    reversechain,
+)
+from buftinom.funcgroups import GroupMatch
 from buftinom.lookup import (
     MULTI_BY_PREFIX,
     MULTI_MULTI_BY_PREFIX,
     ROOT_BY_LENGTH,
+    Alphabet,
     Infix,
     Prefix,
     PrimarySuffix,
-    bond_prio_cmp,
 )
 from buftinom.smileg import Atom, Bond, BondType, Molecule
 from buftinom.translate import WordForm
-
-
-@dataclass
-class AtomFeatures:
-    chain_index: int
-    atom: Atom
-    bond_ahead: Bond
-    subchains: list[MolDecomposition]
+from buftinom.utils import choose
 
 
 class Synt(NamedTuple):
@@ -119,44 +118,6 @@ def suffixes2str(suffixes: list[Synt], sub_suffix: WordForm):
     return "".join(res)
 
 
-def revsubnames(chain_len: int, subnames: list[tuple[int, str]]):
-    for idx, name in subnames:
-        yield chain_len - idx + 1, name
-
-
-def fpod2(chain_len: int, subnames: list[tuple[int, str]]):
-    """First point of difference second round to find weher we need to reverse chain
-    with a new information about the names of the subchains.
-
-    By this time we know that we really need this info
-    to resolve possible collisions (see Iupac.fpod)
-    """
-    idmap = defaultdict(list)
-    for idx, name in subnames:
-        idmap[idx].append(name)
-
-    for idx in idmap.keys():
-        idmap[idx] = tuple(sorted(idmap[idx]))
-
-    for idx in sorted(idmap.keys()):
-        rev_idx = chain_len - idx + 1
-
-        cur = idmap[idx]
-        rev = idmap.get(rev_idx, None)
-        if not rev:
-            return subnames
-
-        if cur < rev:
-            # all good, alphabetical order
-            return subnames
-
-        if cur > rev:
-            # 🔥 Collision, reverse indexing have better alphabetical order
-            return list(revsubnames(chain_len, subnames))
-
-    return subnames
-
-
 def preffixes2str(iupac: IupacName):
     preffixes = iupac.prefixes
     if not preffixes:
@@ -165,8 +126,6 @@ def preffixes2str(iupac: IupacName):
     #
     subnames = [(idx, iupac2str(subn)) for idx, subn in preffixes]
     #
-    if iupac.ref.fpod != FpodReliability.RELIABLE:
-        subnames = fpod2(len(iupac.ref.chain), subnames)
 
     groups: dict[str, list[int]] = defaultdict(list)
 
@@ -216,6 +175,15 @@ def iupac2str(iupac: IupacName):
     return "".join(map(s, [preffix, infix, root, suffix, fsuffix]))
 
 
+@dataclass
+class AtomFeatures:
+    chain_index: int
+    atom: Atom
+    bond_ahead: Bond
+    subciupacs: list[IupacName]
+    functional_group: GroupMatch | None
+
+
 class Iupac:
     def __init__(self, mol: Molecule):
         self.mol = mol
@@ -224,83 +192,24 @@ class Iupac:
     def decomposition(self):
         return Alogrythms(self.mol).decompose()
 
-    def features(self, decomposition: MolDecomposition):
-        """Excluding last atom"""
-        chain = decomposition.chain
+    def features(
+        self, decomp: MolDecomposition, subiupacs: dict[Atom, list[IupacName]]
+    ):
+        chain = decomp.chain
+
+        if decomp.is_cycle:
+            chain: Chain = decomp.chain + (decomp.chain[0],)
 
         for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
             bond = self.mol.bonds[(a1, a2)]
 
-            yield AtomFeatures(i, a1, bond, decomposition.connections.get(a1, []))
-
-    def cycle_features(self, decomposition: MolDecomposition):
-        chain = decomposition.chain + (decomposition.chain[0],)
-
-        for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
-            bond = self.mol.bonds[(a1, a2)]
-
-            yield AtomFeatures(i, a1, bond, decomposition.connections.get(a1, []))
-
-    def fpod_cycle(self, decomposition: MolDecomposition):
-        features = self.cycle_features(decomposition)
-
-        return decomposition, features, FpodReliability.RELIABLE
-
-    def fpod(self, decomposition: MolDecomposition):
-        """First point of difference
-
-        Should return correctly oriented decomposition
-        """
-        # if decomposition.is_cycle:
-        #     return self.fpod_cycle(decomposition)
-
-        straight = decomposition
-        reverse = decomposition.with_chain(tuple(decomposition.chain[::-1]))
-
-        straight_features = list(self.features(straight))
-        reverse_features = list(self.features(reverse))
-
-        nsubchains = 0
-        nbonds = 0
-        rel = FpodReliability.RELIABLE
-
-        subchain_choise = None
-
-        for fstraight, freversed in zip(straight_features, reverse_features):
-            # First subchain
-            # Do not return immediately, bonds have higher priority
-            if subchain_choise is None:
-                sub_strait = len(fstraight.subchains)
-                sub_revers = len(freversed.subchains)
-
-                subchain_cmp = sub_strait - sub_revers
-                if subchain_cmp > 0:
-                    subchain_choise = straight, straight_features, rel
-                if subchain_cmp < 0:
-                    subchain_choise = reverse, reverse_features, rel
-
-                nsubchains += sub_strait
-
-            # First posin of unsaturation
-            bond_cmp = bond_prio_cmp(fstraight.bond_ahead, freversed.bond_ahead)
-            if bond_cmp > 0:
-                return straight, straight_features, rel
-            if bond_cmp < 0:
-                return reverse, reverse_features, rel
-
-            if fstraight.bond_ahead.type != BondType.SINGLE:
-                nbonds += 1
-
-        if subchain_choise is not None:
-            return subchain_choise
-
-        if nbonds + nsubchains > 0:
-            rel = FpodReliability.UNSURE
-
-        return straight, straight_features, rel
-
-    def chain_name(decomp: MolDecomposition, features: list[AtomFeatures]):
-        pass
+            yield AtomFeatures(
+                chain_index=i,
+                atom=a1,
+                bond_ahead=bond,
+                subciupacs=subiupacs.get(a1),
+                functional_group=decomp.functional_groups.get(a1),
+            )
 
     def suffixes_by_features(self, features: list[AtomFeatures], *, primary: bool):
         result = []
@@ -317,29 +226,122 @@ class Iupac:
 
         return result
 
-    def preffixes_by_features(self, features: list[AtomFeatures]):
+    def preffixes(self, dec: MolDecomposition):
+        result: dict[Atom, list[IupacName]] = defaultdict(list)
+        for atom in dec.chain:
+            subchains = dec.connections.get(atom, [])
+
+            for subchain in subchains:
+                #
+                subiupac = self.decompose_name(subchain, primary=False)
+                #
+                result[atom].append(subiupac)
+
+        return result
+
+    def index_preffixes(
+        self, features: list[AtomFeatures], all_preffixes: dict[Atom, list[IupacName]]
+    ):
         result = []
 
         for feature in features:
-            for subchain in feature.subchains:
-                #
-                subname = self.decompose_name(subchain, primary=False)
-                #
-                result.append(Subn(feature.chain_index, subname))
+            if preffixes := all_preffixes.get(feature.atom):
+                for preffix in preffixes:
+                    result.append(Subn(feature.chain_index, preffix))
         return result
 
-    def decompose_name(self, decomposition: MolDecomposition, *, primary: bool = True):
-        decomp, features, reliability = self.fpod(decomposition)
-        decomp.fpod = reliability
+    PRIORITIES = {
+        BondType.SINGLE: 100,
+        "weak-functional-group": 200,
+        BondType.TRIPLE: 300,
+        BondType.DOUBLE: 400,
+        "functional-group": 1000,
+    }
 
+    def feature_bonds(self, feature: AtomFeatures):
+        return Iupac.PRIORITIES.get(feature.bond_ahead.type)
+
+    def feature_group(self, feature: AtomFeatures):
+        prio = Iupac.PRIORITIES
+        if feature.functional_group is not None:
+            group_tag = feature.functional_group
+            if group_tag in {}:
+                return 0
+            return prio.get("functional-group")
+        return 0
+
+    def feature_weak_group(self, feature: AtomFeatures):
+        prio = Iupac.PRIORITIES
+        if feature.functional_group is not None:
+            group_tag = feature.functional_group
+            if group_tag in {}:
+                return prio.get("weak-functional-group")
+
+        return 0
+
+    def feature_subchain(self, feature: AtomFeatures):
+        alphabetical = 0
+        if feature.subciupacs:
+            for sub in feature.subciupacs:
+                # handle for complex radicals
+                alphabetical = max(alphabetical, ord(sub.root_word.norm[0]))
+
+            alphabetical = -alphabetical + ord(Alphabet.MAX.value.norm)
+        return alphabetical
+
+    def compare(
+        self,
+        *,
+        fs1: list[AtomFeatures],
+        fs2: list[AtomFeatures],
+        key: Callable[[AtomFeatures], float],
+    ):
+        mfs1 = map(key, fs1)
+        mfs2 = map(key, fs2)
+        for score1, score2 in zip(mfs1, mfs2):
+            if score1 != score2:
+                return score1 - score2
+
+        return 0
+
+    def fpod(self, decomp: MolDecomposition, preffixes: dict[Atom, list[IupacName]]):
+        straight = decomp
+        reversed = decomp.with_chain(tuple(reversechain(straight.chain)))
+
+        straightf = list(self.features(straight, preffixes))
+        reversef = list(self.features(reversed, preffixes))
+
+        selector = partial(choose, a=(straight, straightf), b=(reversed, reversef))
+        comparator = partial(self.compare, fs1=straightf, fs2=reversef)
+
+        if result := selector(cmp=comparator(key=self.feature_group)):
+            return result
+
+        if result := selector(cmp=comparator(key=self.feature_bonds)):
+            return result
+
+        if result := selector(cmp=comparator(key=self.feature_weak_group)):
+            return result
+
+        if result := selector(cmp=comparator(key=self.feature_subchain)):
+            return result
+
+        return straight, straightf
+
+    def decompose_name(self, decomp: MolDecomposition, *, primary: bool = True):
+        #
+        unordered_preffixes = self.preffixes(decomp)
+        #
+        decomp, features = self.fpod(decomp, unordered_preffixes)
+
+        preffixes = self.index_preffixes(features, unordered_preffixes)
         root = ROOT_BY_LENGTH[len(decomp.chain)].value
         suffix = self.suffixes_by_features(features, primary=primary)
         infix = Infix.CYCLO.value if decomp.is_cycle else None
         subsuff = Prefix.YL.value if not primary else None
-        preffix = self.preffixes_by_features(features)
 
         return IupacName(
-            prefixes=preffix,
+            prefixes=preffixes,
             infix=infix,
             root_word=root,
             prime_suffixes=suffix,
