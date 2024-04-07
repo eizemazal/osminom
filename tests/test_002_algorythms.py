@@ -1,8 +1,10 @@
 import pytest
 
-from buftinom.algorythms import Alogrythms, Chain, MolDecomposition, chainkey
+from buftinom.algorythms import Alogrythms, Chain, chainkey
 from buftinom.smileg import Atom, debug_atoms
 from buftinom.smiles_parser import SmilesParser
+
+debug_atoms(True)
 
 
 def algorythms(smiles: str):
@@ -65,15 +67,20 @@ def test_leaf_distances_tree():
         assert d[(a1, a2)] == 4
 
 
-def test_max_chain():
-    algo = algorythms("BCCCl(CN)CCCP")
+@pytest.mark.parametrize(
+    "smiles, expected_len",
+    [
+        ("CCCC(CC)CCCC", 8),
+        # Not 7 bc O is the functional group
+        ("CCC(C)C(C(C)CC)C(O)C", 6),
+    ],
+)
+def test_max_chain(smiles, expected_len):
+    algo = algorythms(smiles)
 
-    chains = algo.max_chains(algo.all_chains)
+    chain = algo.max_chain(algo.all_chains)
 
-    assert len(chains) == 2
-    chain = chains[0]
-
-    assert symkey(chain) in {("B", "P"), ("P", "B")}
+    assert len(chain) == expected_len
 
 
 def test_stipchains():
@@ -95,7 +102,7 @@ def test_stipchains_many():
 
 
 def test_stipchains_group():
-    algo = algorythms("BCCCCCCO(C(B)CN)I(C(B)CP)CCCCCCP")
+    algo = algorythms("CCCCCCCC(C(C)CC)C(C(C)CC)CCCCCCC")
     chain = algo.max_chain(algo.all_chains)
 
     subchains = algo.stripchains(algo.all_chains, chain)
@@ -105,15 +112,13 @@ def test_stipchains_group():
     for _, subchains in groupped.items():
         assert len(subchains) == 2
 
-    assert set(a.symbol for a in groupped.keys()) == {"O", "I"}
-
 
 @pytest.mark.parametrize(
     "smiles,",
     [
         # They have the same structure, different notation
-        "BCCCCCCO(C(B)CN)I(C(B)CP)CCCCCCP",
-        "BCCCCCCO(C(B)CN)I(CCCCCCP)C(B)CP",
+        "CCCCCCCC(C(C)CC)C(C(C)CC)CCCCCCC",
+        "CCCCCCCO(C(C)CC)C(CCCCCCC)C(C)CC",
     ],
 )
 def test_decompose(smiles):
@@ -122,13 +127,10 @@ def test_decompose(smiles):
     main = algo.decompose()
     main.print()
 
-    o, i = algo.mol.atom("O"), algo.mol.atom("I")
-
     assert len(main.connections) == 2
-    o_dec = main.connections[o][0]
-    assert len(o_dec.connections) == 1
-    i_dec = main.connections[i][0]
-    assert len(i_dec.connections) == 1
+    for conns in main.connections.values():
+        assert len(conns) == 1
+        assert len(conns[0].connections) == 1
 
 
 def test_decompose_multiple_connections():
@@ -145,24 +147,6 @@ def test_decompose_multiple_tree_connections():
 
     main = algo.decompose()
     main.print()
-
-
-def test_decomps_print():
-    algo = algorythms("CCCCCCCCCC")
-
-    a, b, c, d, e, f, g, h, i, j = algo.mol.atoms
-
-    dec = MolDecomposition(
-        [a, b, c, d],
-        {
-            b: [
-                MolDecomposition([e, f], {}),
-                MolDecomposition([g, h, i], {h: [MolDecomposition([j], {})]}),
-            ]
-        },
-    )
-
-    dec.print()
 
 
 @pytest.mark.parametrize(
@@ -251,7 +235,7 @@ def test_functional_groups(smiles, count):
         ("CCCN", 3),
     ],
 )
-def test_functional_group_decompostion(smiles, count):
+def test_one_functional_group_decompostion(smiles, count):
     debug_atoms(True)
     algo = algorythms(smiles)
     dec = algo.decompose()
@@ -259,3 +243,4 @@ def test_functional_group_decompostion(smiles, count):
     dec.print()
 
     assert len(dec.chain) == count
+    assert len(dec.functional_groups) == 1

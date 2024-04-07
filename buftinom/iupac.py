@@ -255,11 +255,7 @@ class Iupac:
         #     return self.fpod_cycle(decomposition)
 
         straight = decomposition
-        reverse = MolDecomposition(
-            tuple(reversed(straight.chain)),
-            straight.connections,
-            is_cycle=straight.is_cycle,
-        )
+        reverse = decomposition.with_chain(tuple(decomposition.chain[::-1]))
 
         straight_features = list(self.features(straight))
         reverse_features = list(self.features(reverse))

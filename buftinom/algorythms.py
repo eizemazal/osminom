@@ -10,9 +10,10 @@ from buftinom.lookup import (
     BOND_PRIORITY,
 )
 from buftinom.smileg import Atom, Molecule
+from buftinom.utils import filter_max
 
 ChainKey: TypeAlias = tuple[Atom, Atom]
-Chain: TypeAlias = list[Atom]
+Chain: TypeAlias = list[Atom] | tuple[Atom, ...]
 
 
 def chainkey(chain: Chain) -> ChainKey:
@@ -38,8 +39,9 @@ class FpodReliability(Enum):
 class MolDecomposition:
     chain: Chain
     connections: dict[Atom, list["MolDecomposition"]]
+    functional_groups: dict[Atom, list[GroupMatch]]
+    is_cycle: bool
     fpod: FpodReliability = FpodReliability.UNKNOWN
-    is_cycle: bool = False
 
     def print(self, level=0):
         print(self.chain)
@@ -62,6 +64,15 @@ class MolDecomposition:
 
     def __eq__(self, o: object) -> bool:
         return id(self) == id(o)
+
+    def with_chain(self, chain: Chain):
+        return MolDecomposition(
+            chain=chain,
+            connections=self.connections,
+            functional_groups=self.functional_groups,
+            is_cycle=self.is_cycle,
+            fpod=self.fpod,
+        )
 
 
 @dataclass
@@ -333,14 +344,17 @@ class Alogrythms:
 
         return self.chains
 
-    def max_chains(self, chains: list[Chain]) -> list[Chain]:
-        if not chains:
-            return []
+    def chain_count_functional_group(self, chain: Chain):
+        i = 0
+        for atom in chain:
+            if atom in self.functional_groups:
+                i += 1
+        return i
 
-        maxlen = len(max(chains, key=len))
-        return [chain for chain in chains if len(chain) == maxlen]
+    def chain_length(self, chain: Chain):
+        return len(chain)
 
-    def chain_priority(self, chain: Chain):
+    def chain_bonds(self, chain: Chain):
         if len(chain) < 2:
             return 0
 
@@ -350,12 +364,23 @@ class Alogrythms:
             prio += BOND_PRIORITY.get(bond.type, 0)
         return prio
 
+    def chain_outside_connections(self, chain: Chain):
+        chain_atoms = set(chain)
+        nneighbors = 0
+        for atom in chain:
+            neighbors = set(self.mol.adj[atom]).difference(chain_atoms)
+            nneighbors += len(neighbors)
+        return nneighbors
+
     def max_chain(self, chains: list[Chain]) -> Chain:
-        max_chains = self.max_chains(chains)
+        max_chains = filter_max(chains, self.chain_count_functional_group)
+        max_chains = filter_max(max_chains, self.chain_length)
+        max_chains = filter_max(max_chains, self.chain_bonds)
+        max_chains = filter_max(max_chains, self.chain_outside_connections)
         #
-        max_prio = max(max_chains, key=self.chain_priority)
+        max_chain = max_chains[0]
         #
-        return max_prio
+        return max_chain
 
     def orient_by_leafs(self, chains: list[Chain]) -> list[Chain]:
         leafs = self.leafs
@@ -454,6 +479,14 @@ class Alogrythms:
                         f"Intersecting cycles are not implemented \n{c1} \n{c2}"
                     )
 
+    def chain_groups(self, chain: Chain):
+        chain_atoms = set(chain)
+        return {
+            atom: group
+            for atom, group in self.functional_groups.items()
+            if atom in chain_atoms
+        }
+
     def decompose(self):
         chains = self.all_chains
         cycles = self.cycles
@@ -474,7 +507,14 @@ class Alogrythms:
                 for chaingroup in self.interconneced(groupped_chains):
                     connections[connection].append(_decompose(chaingroup))
 
-            return MolDecomposition(tuple(max_cycle), connections, is_cycle=True)
+            groups = self.chain_groups(max_cycle)
+
+            return MolDecomposition(
+                chain=tuple(max_cycle),
+                connections=connections,
+                is_cycle=True,
+                functional_groups=groups,
+            )
 
         def _decompose(chains: list[Chain]):
             connections: dict[Atom, list[Chain]] = defaultdict(list)
@@ -487,6 +527,13 @@ class Alogrythms:
                 for chaingroup in self.interconneced(groupped_chains):
                     connections[connection].append(_decompose(chaingroup))
 
-            return MolDecomposition(tuple(max_chain), connections)
+            groups = self.chain_groups(max_chain)
+
+            return MolDecomposition(
+                chain=tuple(max_chain),
+                connections=connections,
+                is_cycle=False,
+                functional_groups=groups,
+            )
 
         return _decompose_cycles(chains, cycles)
