@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property, partial
-from typing import Callable, NamedTuple
+from typing import Callable, Literal, NamedTuple
 
 from buftinom.algorythms import (
     Alogrythms,
@@ -61,7 +61,7 @@ class IupacName:
     root_word: WordForm
     prime_suffixes: list[Synt]
     sub_suffix: WordForm = None
-    func_suffix: WordForm = None
+    func_suffixes: list[Synt]
 
     ref: MolDecomposition
 
@@ -81,39 +81,55 @@ class IupacName:
         )
 
 
-def singleidx2str(name: WordForm, idx: int):
+def singleidx2str(name: WordForm, idx: int, form: Literal["short", "norm"]):
     if idx > 1:
-        return ["-", str(idx), "-", name.short]
+        return ["-", str(idx), "-", name.get(form)]
     else:
-        return [name.short]
+        return [name.get(form)]
 
 
-def manyidx2str(name: WordForm, ids: list[int]):
+def manyidx2str(name: WordForm, ids: list[int], form: Literal["short", "norm"]):
     index = ",".join(map(str, ids))
     multi = MULTI_BY_PREFIX.get(len(ids))
-    return ["-", index, "-", multi.value.norm, name.short]
+    return ["-", index, "-", multi.value.norm, name.get(form)]
 
 
-def suffixes2str(suffixes: list[Synt], sub_suffix: WordForm):
+def suffixes2str(suffixes: list[Synt], form: Literal["short", "norm"]):
+    if not suffixes:
+        return [], None
+
     res: list[str] = []
 
-    ssuff: list[Synt] = sorted(suffixes, key=lambda s: s.value)
-
-    groupped: dict[str, list[WordForm]] = defaultdict(list)
+    groupped: dict[WordForm, list[int]] = defaultdict(list)
     for idx, name in suffixes:
         groupped[name].append(idx)
 
     groups = sorted(groupped.items(), key=lambda g: g[0])
+    lastname = None
     for name, ids in groups:
         if len(ids) > 1:
-            res.extend(manyidx2str(name, ids))
+            res.extend(manyidx2str(name, ids, form))
         else:
-            res.extend(singleidx2str(name, ids[0]))
+            res.extend(singleidx2str(name, ids[0], form))
 
-    if sub_suffix:
-        res.extend(sub_suffix.norm)
-    else:
-        res[-1] = ssuff[-1].value.norm
+        lastname = name
+
+    return res, lastname
+
+
+def all_suffixes2str(iupac: IupacName):
+    primes, lastprime = suffixes2str(iupac.prime_suffixes, form="short")
+    functionals, _ = suffixes2str(iupac.func_suffixes, form="norm")
+
+    res = primes
+
+    if iupac.sub_suffix:
+        res.append(iupac.sub_suffix.norm)
+    if functionals:
+        res.extend(functionals)
+
+    if not iupac.sub_suffix and not functionals:
+        res[-1] = lastprime.norm
 
     return "".join(res)
 
@@ -169,10 +185,9 @@ def iupac2str(iupac: IupacName):
     preffix = preffixes2str(iupac)
     infix = iupac.infix
     root = iupac.root_word.norm
-    suffix = suffixes2str(iupac.prime_suffixes, iupac.sub_suffix)
-    fsuffix = iupac.func_suffix
+    suffix = all_suffixes2str(iupac)
 
-    return "".join(map(s, [preffix, infix, root, suffix, fsuffix]))
+    return "".join(map(s, [preffix, infix, root, suffix]))
 
 
 @dataclass
@@ -189,8 +204,12 @@ class Iupac:
         self.mol = mol
 
     @cached_property
+    def alg(self):
+        return Alogrythms(self.mol)
+
+    @cached_property
     def decomposition(self):
-        return Alogrythms(self.mol).decompose()
+        return self.alg.decompose()
 
     def features(
         self, decomp: MolDecomposition, subiupacs: dict[Atom, list[IupacName]]
@@ -224,6 +243,13 @@ class Iupac:
         if not result and primary:
             result.append(Synt(1, PrimarySuffix.ANE.value))
 
+        return result
+
+    def functional_suffixes(self, features: list[AtomFeatures]):
+        result = []
+        for f in features:
+            if f.functional_group:
+                result.append(Synt(f.chain_index, f.functional_group.tag.value))
         return result
 
     def preffixes(self, dec: MolDecomposition):
@@ -264,7 +290,7 @@ class Iupac:
     def feature_group(self, feature: AtomFeatures):
         prio = Iupac.PRIORITIES
         if feature.functional_group is not None:
-            group_tag = feature.functional_group
+            group_tag = feature.functional_group.tag.value
             if group_tag in {}:
                 return 0
             return prio.get("functional-group")
@@ -273,7 +299,7 @@ class Iupac:
     def feature_weak_group(self, feature: AtomFeatures):
         prio = Iupac.PRIORITIES
         if feature.functional_group is not None:
-            group_tag = feature.functional_group
+            group_tag = feature.functional_group.tag
             if group_tag in {}:
                 return prio.get("weak-functional-group")
 
@@ -337,6 +363,7 @@ class Iupac:
         preffixes = self.index_preffixes(features, unordered_preffixes)
         root = ROOT_BY_LENGTH[len(decomp.chain)].value
         suffix = self.suffixes_by_features(features, primary=primary)
+        func_suffixes = self.functional_suffixes(features)
         infix = Infix.CYCLO.value if decomp.is_cycle else None
         subsuff = Prefix.YL.value if not primary else None
 
@@ -346,6 +373,6 @@ class Iupac:
             root_word=root,
             prime_suffixes=suffix,
             sub_suffix=subsuff,
-            func_suffix=None,
+            func_suffixes=func_suffixes,
             ref=decomp,
         )

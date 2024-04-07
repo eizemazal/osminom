@@ -126,18 +126,26 @@ def test_cycle_names(parser, smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
-        ("CCC(C)(C)CC", "3,3-dimethylpentane"),
-        ("CC(C)CC(C)C", "2,4-dimethylpentane"),
-        ("CCCCC(CC)C(C)CCC", "5-ethyl-4-methylnonane"),
-        ("CCCCCC(C(C)C(C)CC)C(CC)CCCC", "6-(1,2-dimethylbutyl)-5-ethylundecane"),
+        ("CCCO", "propanol"),
+        ("OCCC", "propanol"),
+        ("CC(O)C", "propan-2-ol"),
+        ("CC(O)C(O)C", "butan-2,3-diol"),
+        ("CCC(=O)O", "propanoic acid"),
+        ("CCC(O)=O", "propanoic acid"),
+        ("CCCN", "propanamine"),
+        ("CC(C)CCCO", "4-methylpentanol"),
+        ("C1CCC(O)CC1", "cyclohexanol"),
     ],
 )
-def test_decomposed_pref(parser, smiles, expected):
+def test_functional_group_naming(parser, smiles, expected):
     (mol,) = parser.parse(smiles)
     iupac = Iupac(mol)
 
     mol.print_table()
     iupac.decomposition.print()
+    for f in iupac.alg.functional_groups.items():
+        print(f)
 
-    name = iupac.decompose_name(iupac.decomposition)
+    name = iupac2str(iupac.decompose_name(iupac.decomposition))
     print(name)
+    assert name == expected

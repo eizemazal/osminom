@@ -125,8 +125,8 @@ class Alogrythms:
 
         result: dict[Atom, GroupMatch] = {}
 
-        for atom in self.mol.atoms:
-            for matcher in matchers:
+        for matcher in matchers:
+            for atom in self.mol.atoms:
                 mtch = matcher.matches(atom)
                 if mtch and mtch.root not in result:
                     result[mtch.root] = mtch
