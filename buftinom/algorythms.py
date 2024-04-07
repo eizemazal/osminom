@@ -268,16 +268,6 @@ class Alogrythms:
         path = left + reversechain(right) + [last_common_node]
         return path
 
-    def max_cycle(self, cycles: list[Chain]) -> Chain:
-        maxlen = max(len(c) for c in cycles)
-        by_length = [c for c in cycles if len(c) == maxlen]
-        # if len(by_length) == 1:
-        #     return by_length[0]
-        # if aromatic - better
-        # if func group - even better
-        # now only len
-        return by_length[0]
-
     @lru_cache(maxsize=256)
     def distances_from(self, start: Atom):
         """Dijkstra's algorithm"""
@@ -351,6 +341,12 @@ class Alogrythms:
                 i += 1
         return i
 
+    def chain_cycle(self, chain: Chain):
+        if len(chain) < 3:
+            return False
+        first, last = chainkey(chain)
+        return (last, first) in self.mol.bonds
+
     def chain_length(self, chain: Chain):
         return len(chain)
 
@@ -374,6 +370,7 @@ class Alogrythms:
 
     def max_chain(self, chains: list[Chain]) -> Chain:
         max_chains = filter_max(chains, self.chain_count_functional_group)
+        max_chains = filter_max(max_chains, self.chain_cycle)
         max_chains = filter_max(max_chains, self.chain_length)
         max_chains = filter_max(max_chains, self.chain_bonds)
         max_chains = filter_max(max_chains, self.chain_outside_connections)
@@ -492,30 +489,6 @@ class Alogrythms:
         cycles = self.cycles
         self.assert_not_implemented(cycles)
 
-        def _decompose_cycles(chains: list[Chain], cycles: list[Chain]):
-            if not cycles:
-                return _decompose(chains)
-
-            connections: dict[Atom, list[Chain]] = defaultdict(list)
-
-            max_cycle = self.max_cycle(cycles)
-
-            subchains = self.stripchains(chains, max_cycle)
-            groupped = self.group_by_ends(subchains)
-
-            for connection, groupped_chains in groupped.items():
-                for chaingroup in self.interconneced(groupped_chains):
-                    connections[connection].append(_decompose(chaingroup))
-
-            groups = self.chain_groups(max_cycle)
-
-            return MolDecomposition(
-                chain=tuple(max_cycle),
-                connections=connections,
-                is_cycle=True,
-                functional_groups=groups,
-            )
-
         def _decompose(chains: list[Chain]):
             connections: dict[Atom, list[Chain]] = defaultdict(list)
 
@@ -532,8 +505,8 @@ class Alogrythms:
             return MolDecomposition(
                 chain=tuple(max_chain),
                 connections=connections,
-                is_cycle=False,
+                is_cycle=self.chain_cycle(max_chain),
                 functional_groups=groups,
             )
 
-        return _decompose_cycles(chains, cycles)
+        return _decompose(chains + cycles)
