@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import NotRequired, TypedDict, Unpack
 
+from buftinom.lookup import FunctionalGroup
 from buftinom.smileg import Bond, BondSymbol, Molecule
 from osminom.atom import Atom
 
@@ -28,11 +29,11 @@ def find(mol: Molecule, start: Atom, via: AtomParams) -> Atom | None:
 class GroupMatch:
     root: Atom | None
     atoms: set[Atom]
-    tag: str
+    tag: FunctionalGroup
 
 
 class Matcher:
-    def __init__(self, mol: Molecule, atom: AtomParams, tag: str):
+    def __init__(self, mol: Molecule, atom: AtomParams, tag: FunctionalGroup):
         self.mol = mol
         self.atom = atom
         self.next: list[Matcher] = []
@@ -89,7 +90,7 @@ class Matcher:
 
 
 class MatcherBuilder:
-    def __init__(self, mol: Molecule, tag: str):
+    def __init__(self, mol: Molecule, tag: FunctionalGroup):
         self.mol = mol
         self.tag = tag
 
@@ -107,7 +108,7 @@ class MatcherBuilder:
 
 
 def alco_matcher(mol: Molecule):
-    match = MatcherBuilder(mol, "alcohol")
+    match = MatcherBuilder(mol, FunctionalGroup.ALCOHOL)
 
     matcher = match.chain(
         match.atom(symbol="O"),
@@ -119,7 +120,7 @@ def alco_matcher(mol: Molecule):
 
 def acid_matcher(mol: Molecule):
     """Linear match O=C-O"""
-    match = MatcherBuilder(mol, "carboxylic-acid")
+    match = MatcherBuilder(mol, FunctionalGroup.CARBOXYLIC_ACID)
 
     return match.chain(
         match.atom(symbol="O"),
@@ -129,7 +130,7 @@ def acid_matcher(mol: Molecule):
 
 
 def amine_matcher(mol: Molecule):
-    match = MatcherBuilder(mol, "amine")
+    match = MatcherBuilder(mol, FunctionalGroup.AMINE)
 
     return match.chain(
         match.atom(symbol="N"),

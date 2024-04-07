@@ -43,7 +43,7 @@ class PrimarySuffix(Enum):
 
 
 class FunctionalGroup(Enum):
-    CARBOXYLIC = _("functional-group.carboxylic-acid")
+    CARBOXYLIC_ACID = _("functional-group.carboxylic-acid")
     AMIDE = _("functional-group.amide")
     NITRITE = _("functional-group.nitrite")
     ALDEHYDE = _("functional-group.al")
@@ -86,10 +86,6 @@ BOND_PRIORITY = {
 
 def bond_prio_cmp(a: Bond, b: Bond) -> int:
     return BOND_PRIORITY[a.type] - BOND_PRIORITY[b.type]
-
-
-class FunctionalGroup(Enum):
-    pass
 
 
 ROOT_BY_LENGTH = {

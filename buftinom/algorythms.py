@@ -112,7 +112,8 @@ class Alogrythms:
                 leafs.append(atom)
 
         # Take one point from the cycle
-        # so we can track chainded connections from the leafs and the cycles
+        # so we can track chainded connections from the to and the cycles
+        # and between-the-circle chains
         for cycle in cycles:
             leafs.append(cycle[0])
 
