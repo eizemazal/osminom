@@ -1,6 +1,6 @@
 import pytest
 
-from buftinom.funcgroups import acid_matcher2, alco_matcher
+from buftinom.funcgroups import acid_matcher, alco_matcher
 from buftinom.smiles_parser import SmilesParser
 
 
@@ -45,7 +45,7 @@ def test_alcohol(smiles, expected_nmatches):
 )
 def test_acid(smiles, expected_nmatches):
     (mol,) = SmilesParser().parse(smiles)
-    acid = acid_matcher2(mol)
+    acid = acid_matcher(mol)
 
     nmatches = 0
     for atom in mol.atoms:

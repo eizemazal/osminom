@@ -92,8 +92,8 @@ class Molecule:
         self._atoms: list[Atom] = []
         self._bind_target: Atom | None = None
         self._staged_bond: Bond | None = None
-        self._bonds: dict[tuple[Atom, Atom] : Bond] = {}
-        self._closures: dict[str : tuple[Bond, Atom]] = {}
+        self._bonds: dict[tuple[Atom, Atom], Bond] = {}
+        self._closures: dict[str, tuple[Bond, Atom]] = {}
 
     @property
     def bonds(self) -> dict[tuple[Atom, Atom], Bond]:

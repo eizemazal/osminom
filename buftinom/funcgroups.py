@@ -28,13 +28,15 @@ def find(mol: Molecule, start: Atom, via: AtomParams) -> Atom | None:
 class GroupMatch:
     root: Atom | None
     atoms: set[Atom]
+    tag: str
 
 
 class Matcher:
-    def __init__(self, mol: Molecule, atom: AtomParams):
+    def __init__(self, mol: Molecule, atom: AtomParams, tag: str):
         self.mol = mol
         self.atom = atom
         self.next: list[Matcher] = []
+        self.tag = tag
 
     def then(self, **atom: Unpack[AtomParams]):
         nextm = Matcher(self.mol, atom)
@@ -83,12 +85,13 @@ class Matcher:
 
             root = mtch.root
 
-        return GroupMatch(root, atoms)
+        return GroupMatch(root, atoms, self.tag)
 
 
 class MatcherBuilder:
-    def __init__(self, mol: Molecule):
+    def __init__(self, mol: Molecule, tag: str):
         self.mol = mol
+        self.tag = tag
 
     def chain(self, *matchers: Matcher):
         m1, *ms = matchers
@@ -100,11 +103,11 @@ class MatcherBuilder:
         return root
 
     def atom(self, **atom: Unpack[AtomParams]) -> Matcher:
-        return Matcher(self.mol, atom)
+        return Matcher(self.mol, atom, tag=self.tag)
 
 
 def alco_matcher(mol: Molecule):
-    match = MatcherBuilder(mol)
+    match = MatcherBuilder(mol, "alcohol")
 
     matcher = match.chain(
         match.atom(symbol="O"),
@@ -115,7 +118,8 @@ def alco_matcher(mol: Molecule):
 
 
 def acid_matcher(mol: Molecule):
-    match = MatcherBuilder(mol)
+    """Linear match O=C-O"""
+    match = MatcherBuilder(mol, "carboxylic-acid")
 
     return match.chain(
         match.atom(symbol="O"),
@@ -124,8 +128,25 @@ def acid_matcher(mol: Molecule):
     )
 
 
+def amine_matcher(mol: Molecule):
+    match = MatcherBuilder(mol, "amine")
+
+    return match.chain(
+        match.atom(symbol="N"),
+        match.atom(by="-", symbol="C", is_root=True),
+    )
+
+
 def acid_matcher2(mol: Molecule):
-    match = MatcherBuilder(mol)
+    """Example of a tree-matcher.
+        C = O
+       /
+      O
+
+    But I recommend to build matchers starting from non-C atoms if possible.
+    A tad better performance.
+    """
+    match = MatcherBuilder(mol, "carboxylic-acid")
 
     return match.chain(
         match.atom(symbol="C", is_root=True).branch(
@@ -135,17 +156,15 @@ def acid_matcher2(mol: Molecule):
     )
 
 
-# def tree_matcher(mol: Molecule, point: Atom):
-#     builder = MatcherBuilder(mol)
+def get_matchers(molecule: Molecule):
+    """Return matchers in priority order.
 
-#     matcher = builder.chain(
-#         builder.atom("C"),
-#         builder.split(
-#             builder.chain(
-#                 builder.atom("=", "O"),
-#             ),
-#             builder.chain(
-#                 builder.atom("-", "O"),
-#             )
-#         )
-#     )
+    For examle since acid matcher presceeds alco matcher
+    we guarantee that COOH is matching before CO, and selected first (if matched)
+    which would cause collision otherwise (because CO always matches if COOH matches)
+    """
+    return [
+        acid_matcher(molecule),
+        alco_matcher(molecule),
+        amine_matcher(molecule),
+    ]

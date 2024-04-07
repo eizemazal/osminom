@@ -5,6 +5,7 @@ from enum import Enum
 from functools import cached_property, lru_cache
 from typing import Generator, TypeAlias
 
+from buftinom.funcgroups import GroupMatch, get_matchers
 from buftinom.lookup import (
     BOND_PRIORITY,
 )
@@ -86,10 +87,17 @@ class Alogrythms:
 
         leafs = []
         for atom, connections in self.mol.adj.items():
+            if atom in self.functional_group_atoms:
+                continue
             if atom in cycle_atoms:
                 continue
-            noncyclic_conns = set(connections).difference(cycle_atoms)
-            if len(noncyclic_conns) <= 1:
+
+            available_conns = (
+                set(connections)
+                .difference(cycle_atoms)
+                .difference(self.functional_group_atoms)
+            )
+            if len(available_conns) <= 1:
                 leafs.append(atom)
 
         # Take one point from the cycle
@@ -98,6 +106,31 @@ class Alogrythms:
             leafs.append(cycle[0])
 
         return leafs
+
+    @cached_property
+    def functional_groups(self):
+        matchers = get_matchers(self.mol)
+
+        result: dict[Atom, GroupMatch] = {}
+
+        for atom in self.mol.atoms:
+            for matcher in matchers:
+                mtch = matcher.matches(atom)
+                if mtch and mtch.root not in result:
+                    result[mtch.root] = mtch
+
+        return result
+
+    @cached_property
+    def functional_group_atoms(self):
+        atoms: set[Atom] = set()
+        for func_group in self.functional_groups.values():
+            group_atoms = func_group.atoms
+            if func_group.root:
+                group_atoms = group_atoms.difference({func_group.root})
+
+            atoms |= group_atoms
+        return atoms
 
     def cycle_exists(self, cycle_matchers: list[set[Atom]], cycle_atoms: set[Atom]):
         for matcher in cycle_matchers:
@@ -164,7 +197,7 @@ class Alogrythms:
 
         queue = deque([(start, None)])
         visited = {start}
-        predecessor: dict[Atom : Atom | None] = {start: None}
+        predecessor: dict[Atom, Atom | None] = {start: None}
 
         while queue:
             current_vertex, parent = queue.popleft()
@@ -193,7 +226,7 @@ class Alogrythms:
 
         return []
 
-    def unfold_cycle(self, predc: dict[Atom:Atom], start: Atom, end: Atom) -> Chain:
+    def unfold_cycle(self, predc: dict[Atom, Atom], start: Atom, end: Atom) -> Chain:
         """Since we use bfs cycle will look like a collar"""
         left = [end]
         right = [start]
@@ -243,7 +276,7 @@ class Alogrythms:
         distances = {a: float("inf") for a in self.mol.atoms}
         distances[start] = 0
 
-        predecessors: dict[Atom:Atom] = {a: None for a in self.mol.atoms}
+        predecessors: dict[Atom, Atom] = {a: None for a in self.mol.atoms}
 
         while queue:
             dist, node = heapq.heappop(queue)
@@ -259,7 +292,7 @@ class Alogrythms:
 
         return distances, predecessors
 
-    def unfold_chain(self, predc: dict[Atom:Atom], start: Atom, end: Atom) -> Chain:
+    def unfold_chain(self, predc: dict[Atom, Atom], start: Atom, end: Atom) -> Chain:
         path = []
         node = end
         while node is not None:
