@@ -67,7 +67,7 @@ class MolDecomposition:
 
     def with_chain(self, chain: Chain):
         return MolDecomposition(
-            chain=chain,
+            chain=tuple(chain),
             connections=self.connections,
             functional_groups=self.functional_groups,
             is_cycle=self.is_cycle,

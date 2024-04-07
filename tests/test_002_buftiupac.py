@@ -107,7 +107,7 @@ def test_various_molecules(parser, smiles, expected):
     "smiles, expected",
     [
         ("CC1CCCCC1", "1-methylcyclohexane"),
-        # ("C1CC(C)CCC1", "1-methylcyclohexane"),
+        ("C1CC(C)CCC1", "1-methylcyclohexane"),
         ("C1CCCCC1C", "1-methylcyclohexane"),
         ("CC1C(C)CC(C)CC1", "1,2,4-trimethylcyclohexane"),
     ],

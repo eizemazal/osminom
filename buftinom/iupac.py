@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from functools import cached_property, partial
-from typing import Callable, Literal, NamedTuple
+from functools import cached_property
+from typing import Literal, NamedTuple
 
 from buftinom.algorythms import (
     Alogrythms,
@@ -21,7 +21,7 @@ from buftinom.lookup import (
 )
 from buftinom.smileg import Atom, Bond, BondType, Molecule
 from buftinom.translate import WordForm
-from buftinom.utils import choose
+from buftinom.utils import first_max, nonzero_indexes
 
 
 class Synt(NamedTuple):
@@ -199,6 +199,20 @@ class AtomFeatures:
     functional_group: GroupMatch | None
 
 
+@dataclass
+class DecFeatures:
+    dec: MolDecomposition
+    fs: list[AtomFeatures]
+
+    group_scores: list[int] = field(default_factory=list)
+    bond_scores: list[int] = field(default_factory=list)
+    weak_group_scores: list[int] = field(default_factory=list)
+    subchain_scores: list[int] = field(default_factory=list)
+
+    def as_tuple(self):
+        return self.dec, self.fs
+
+
 class Iupac:
     def __init__(self, mol: Molecule):
         self.mol = mol
@@ -277,11 +291,11 @@ class Iupac:
         return result
 
     PRIORITIES = {
-        BondType.SINGLE: 100,
-        "weak-functional-group": 200,
-        BondType.TRIPLE: 300,
-        BondType.DOUBLE: 400,
-        "functional-group": 1000,
+        BondType.SINGLE: 0,
+        "weak-functional-group": 1,
+        BondType.TRIPLE: 2,
+        BondType.DOUBLE: 3,
+        "functional-group": 4,
     }
 
     def feature_bonds(self, feature: AtomFeatures):
@@ -289,21 +303,26 @@ class Iupac:
 
     def feature_group(self, feature: AtomFeatures):
         prio = Iupac.PRIORITIES
-        if feature.functional_group is not None:
-            group_tag = feature.functional_group.tag.value
-            if group_tag in {}:
-                return 0
-            return prio.get("functional-group")
-        return 0
+        if feature.functional_group is None:
+            return 0
+
+        group_tag = feature.functional_group.tag.value
+        # future:    in weak functional group
+        if group_tag in {}:
+            return 0
+
+        return prio.get("functional-group")
 
     def feature_weak_group(self, feature: AtomFeatures):
         prio = Iupac.PRIORITIES
-        if feature.functional_group is not None:
-            group_tag = feature.functional_group.tag
-            if group_tag in {}:
-                return prio.get("weak-functional-group")
+        if feature.functional_group is None:
+            return 0
 
-        return 0
+        group_tag = feature.functional_group.tag
+        if group_tag not in {}:
+            return 0
+
+        return prio.get("weak-functional-group")
 
     def feature_subchain(self, feature: AtomFeatures):
         alphabetical = 0
@@ -315,44 +334,96 @@ class Iupac:
             alphabetical = -alphabetical + ord(Alphabet.MAX.value.norm)
         return alphabetical
 
-    def compare(
-        self,
-        *,
-        fs1: list[AtomFeatures],
-        fs2: list[AtomFeatures],
-        key: Callable[[AtomFeatures], float],
-    ):
-        mfs1 = map(key, fs1)
-        mfs2 = map(key, fs2)
-        for score1, score2 in zip(mfs1, mfs2):
-            if score1 != score2:
-                return score1 - score2
-
-        return 0
-
     def fpod(self, decomp: MolDecomposition, preffixes: dict[Atom, list[IupacName]]):
+        if decomp.is_cycle:
+            return self.fpod_cycle(decomp, preffixes)
+
         straight = decomp
         reversed = decomp.with_chain(tuple(reversechain(straight.chain)))
 
-        straightf = list(self.features(straight, preffixes))
-        reversef = list(self.features(reversed, preffixes))
+        return self._fpod_many(preffixes, [straight, reversed])
 
-        selector = partial(choose, a=(straight, straightf), b=(reversed, reversef))
-        comparator = partial(self.compare, fs1=straightf, fs2=reversef)
+    def fpod_cycle(
+        self, decomp: MolDecomposition, preffixes: dict[Atom, list[IupacName]]
+    ):
+        features = list(self.features(decomp, preffixes))
 
-        if result := selector(cmp=comparator(key=self.feature_group)):
-            return result
+        priorities = [
+            self.feature_group,
+            self.feature_bonds,
+            self.feature_weak_group,
+            self.feature_subchain,
+            # any
+            lambda x: 1,
+        ]
 
-        if result := selector(cmp=comparator(key=self.feature_bonds)):
-            return result
+        starts = []
+        for key_func in priorities:
+            starts = list(nonzero_indexes(features, key_func))
+            if starts:
+                break
 
-        if result := selector(cmp=comparator(key=self.feature_weak_group)):
-            return result
+        comparable = []
 
-        if result := selector(cmp=comparator(key=self.feature_subchain)):
-            return result
+        #                   we are here
+        # < here for backward  |  here for forward >
+        #
+        # test all possible starts in circle
+        chain = decomp.chain + decomp.chain + decomp.chain
 
-        return straight, straightf
+        for first_id in starts:
+            curr_idx = len(decomp.chain)
+            start = curr_idx + first_id
+            size = len(decomp.chain)
+
+            fchain = chain[start : start + size]
+            bchain = reversechain(chain[start - size + 1 : start + 1])
+
+            assert len(fchain) == len(bchain)
+
+            comparable.append(decomp.with_chain(fchain))
+            comparable.append(decomp.with_chain(bchain))
+
+        return self._fpod_many(preffixes, comparable)
+
+    def _fpod_many(
+        self, preffixes: dict[Atom, list[IupacName]], decs: list[MolDecomposition]
+    ):
+        features = [
+            DecFeatures(dec, list(self.features(dec, preffixes))) for dec in decs
+        ]
+
+        #
+        for decfs in features:
+            decfs.group_scores = list(map(self.feature_group, decfs.fs))
+
+        i = first_max([d.group_scores for d in features])
+        if i is not None:
+            return features[i].as_tuple()
+        #
+        for decfs in features:
+            decfs.bond_scores = list(map(self.feature_bonds, decfs.fs))
+
+        i = first_max([d.bond_scores for d in features])
+        if i is not None:
+            return features[i].as_tuple()
+        #
+        for decfs in features:
+            decfs.weak_group_scores = list(map(self.feature_weak_group, decfs.fs))
+
+        i = first_max([d.weak_group_scores for d in features])
+        if i is not None:
+            return features[i].as_tuple()
+        #
+        for decfs in features:
+            decfs.subchain_scores = list(map(self.feature_subchain, decfs.fs))
+
+        i = first_max([d.subchain_scores for d in features])
+        if i is not None:
+            return features[i].as_tuple()
+
+        #
+        return features[0].as_tuple()
 
     def decompose_name(self, decomp: MolDecomposition, *, primary: bool = True):
         #
