@@ -38,7 +38,7 @@ def test_table2list():
     a2 = algo.mol._atoms[1]
     a3 = algo.mol._atoms[2]
 
-    list = algo.table2list()
+    list = algo.mol.table2list()
 
     assert len(list[a1]) == 1
     assert len(list[a2]) == 2
@@ -210,7 +210,7 @@ def test_decomps_print():
 def test_cycle(smiles, start, expected_len):
     debug_atoms(True)
     algo = algorythms(smiles)
-    cycle = algo.shortest_cycle(algo.adj, algo.mol.atom(start))
+    cycle = algo.shortest_cycle(algo.mol.adj, algo.mol.atom(start))
     print(cycle)
     assert len(cycle) == expected_len, cycle
 

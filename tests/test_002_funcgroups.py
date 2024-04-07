@@ -1,22 +1,59 @@
-from buftinom.funcgroups import alcohol, carboxylic_acid
+import pytest
+
+from buftinom.funcgroups import acid_matcher2, alco_matcher
 from buftinom.smiles_parser import SmilesParser
 
 
-def test_alcohol():
-    alc = alcohol()
-    alc.print_table()
+@pytest.mark.parametrize(
+    "smiles, expected_nmatches",
+    [
+        ("C", 0),
+        ("O", 0),
+        ("CCC", 0),
+        ("OCCC", 1),
+        ("CC(O)C", 1),
+        ("CCCO", 1),
+        ("CC(O)CCO", 2),
+    ],
+)
+def test_alcohol(smiles, expected_nmatches):
+    (mol,) = SmilesParser().parse(smiles)
+    alcohol = alco_matcher(mol)
 
-    (mol,) = SmilesParser().parse("C(O)C")
+    nmatches = 0
+    for atom in mol.atoms:
+        mtch = alcohol.matches(atom)
+        if mtch is None:
+            continue
 
-    oxy = mol.atom("O")
-    mol.neighbors
+        print(mtch)
+        nmatches += 1
 
-    mol.print_table()
+    assert nmatches == expected_nmatches
 
 
-def test_acid():
-    acid = carboxylic_acid()
-    acid.print_table()
+@pytest.mark.parametrize(
+    "smiles, expected_nmatches",
+    [
+        ("C", 0),
+        ("O", 0),
+        ("CCC", 0),
+        ("C(=O)O", 1),
+        ("CC(=O)O", 1),
+        ("CCCC(=O)O", 1),
+    ],
+)
+def test_acid(smiles, expected_nmatches):
+    (mol,) = SmilesParser().parse(smiles)
+    acid = acid_matcher2(mol)
 
-    (mol,) = SmilesParser().parse("C(=O)(O)CCC")
-    mol.print_table()
+    nmatches = 0
+    for atom in mol.atoms:
+        mtch = acid.matches(atom)
+        if mtch is None:
+            continue
+
+        print(mtch)
+        nmatches += 1
+
+    assert nmatches == expected_nmatches

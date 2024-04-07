@@ -74,18 +74,6 @@ class Alogrythms:
         self.mol = mol
         self.chains: list[Chain] = []
 
-    def table2list(self):
-        adj_list: dict[Atom, list[Atom]] = defaultdict(list)
-
-        for a1, a2 in self.mol.bonds.keys():
-            adj_list[a1].append(a2)
-
-        return adj_list
-
-    @cached_property
-    def adj(self):
-        return self.table2list()
-
     @cached_property
     def leafs(self):
         if len(self.mol.atoms) == 1:
@@ -97,7 +85,7 @@ class Alogrythms:
             cycle_atoms |= set(cycle)
 
         leafs = []
-        for atom, connections in self.adj.items():
+        for atom, connections in self.mol.adj.items():
             if atom in cycle_atoms:
                 continue
             noncyclic_conns = set(connections).difference(cycle_atoms)
@@ -121,7 +109,7 @@ class Alogrythms:
     @cached_property
     def cycles(self) -> list[Chain]:
         """BFS/ modified Johnson's algorithm for undirected graph"""
-        adj = self.adj
+        adj = self.mol.adj
         atoms = self.mol.atoms
         adjset = {atom: set(connections) for atom, connections in adj.items()}
 
@@ -249,7 +237,7 @@ class Alogrythms:
     @lru_cache(maxsize=256)
     def distances_from(self, start: Atom):
         """Dijkstra's algorithm"""
-        adj = self.adj
+        adj = self.mol.adj
         queue = [(0, start)]
 
         distances = {a: float("inf") for a in self.mol.atoms}

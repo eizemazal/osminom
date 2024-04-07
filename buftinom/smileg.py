@@ -1,3 +1,4 @@
+from ast import TypeAlias
 from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property
@@ -69,12 +70,15 @@ class BondType(Enum):
     __repr__ = __str__
 
 
+BondSymbol: TypeAlias = Literal["-", "=", "#", ":", "/", "\\"]
+
+
 @dataclass(slots=True, eq=True, frozen=True, unsafe_hash=True)
 class Bond:
     type: BondType
 
     @classmethod
-    def make(cls, s: Literal["-", "=", "#", ":", "/", "\\"]):
+    def make(cls, s: BondSymbol):
         return cls(BondType(s))
 
     def __str__(self):
@@ -186,7 +190,6 @@ class MoleculeConstructor(Molecule):
         return self
 
     def merge(self, other: "MoleculeConstructor"):
-        other.print_table()
         cbond = self._pop_bond()
         incoming_bond = other.connect_bond
         connectee = other._atoms[0]
