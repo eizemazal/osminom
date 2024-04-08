@@ -1,68 +1,43 @@
 # Smiles to IUPAC
 
-[docs](http://www.adichemistry.com/organic/basics/iupac1/organic-iupac-nomenclature.html)
+## Convert SMILES to IUPAC names
 
-## Structure
+This package contains a command line tool to convert SMILES to IUPAC names.
 
-- Prefixes
-- Infix
+```bash
+python -m buftinom --help
+```
 
-- Base name
-    - Root word
-    - primary suffix
+## Usage as library
 
-- Suffixes
+- Check the `buftinom/__inut__.py` file for public high-level methods.
 
+- Check the `buftinom/__main__.py` file for an example of how to use the library.
 
-# Steps involved
+- To use low-level check
 
-1) The first step in giving IUPAC name to an organic compound is to select the parent chain and assign a word root.
+```python
+from buftinom import SmilesParser, Iupac
 
-2) Next, the appropriate primary suffix(es) must be added to the root word to indicate the saturation or unsaturation.
+mols = SmilesParser().parse(smiles)
 
-3) If the molecule contains functional group or groups, a secondary suffix must be added to indicate the main functional group.
+names = []
 
-4) Prefix the root word with the infix "cyclo" if the parent chain is cyclic; or with the infix "spiro" if it is a spiro compound; or with the infix "bicyclo" if the compound is bicyclic.
+for mol in mols:
+    iupac = Iupac(mol)
 
-5) Finally add  prefix(es) to the IUPAC name, if there are side chains or substituents on the parent chain.
+```
 
+from the `Iupac` object you'll have acces to the following attributes:
 
+```python
+iupac.mol  # the molecule object
+iupac.decompostion  # decomposition of the molecule
+iupac.alg  # the algorithms object used to create decomposition
 
+iupac_naem =iupac.construct_name()  # will construct the structural representation of the name
 
-## Functional group priority
+from buftinom import iupac2str
 
-- COOOH
-- OH
-
-
-## Cyclo
-
-Cyclic > Acyclic
-
-- Functional group
-- Size
-    - two of the same size - `1,1'-bi(cyclopentyl)`
-- Aromatic
-
-
-## Spyro
-
-- `spiro[4.5]decane` - count without the spiro point
-- Numbers - from small circle to large circle
-
-
-## Bicyclo
-
-- `bicyclo[2.2.1]heptane` - count without the bicyclo point (sides, then bridge)
--
-
-
-# Data Structure requirements
-
-- Найти самую длинную цепь
-- Найти циклы
-- Вершины
-    - Атом
-    - ...свойства из SMILES
-- Рёбра
-    - Тип связи
+iupac2str(iupac_name)  # will convert the structured name to string representetation
+```
