@@ -43,6 +43,7 @@ def main():
 
     for mol in molecules:
         iupac = Iupac(mol)
+
         if args.verbose:
             print("🔥 Molecule:")
             mol.print_table()
