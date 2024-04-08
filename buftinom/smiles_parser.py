@@ -184,5 +184,5 @@ class SmilesParser:
     def p_error(self, p):
         raise ValueError(f"Syntax error: {p}")
 
-    def parse(self, data) -> list[Molecule]:
-        return self.parser.parse(data, lexer=self.lexer, debug=self.debug)  #
+    def parse(self, smiles_str: str) -> list[Molecule]:
+        return self.parser.parse(smiles_str, lexer=self.lexer, debug=self.debug)  #

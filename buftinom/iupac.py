@@ -75,7 +75,7 @@ class IupacName:
                     self.root_word,
                     self.prime_suffixes,
                     self.sub_suffix,
-                    self.func_suffix,
+                    self.func_suffixes,
                 ],
             )
         )
@@ -447,3 +447,6 @@ class Iupac:
             func_suffixes=func_suffixes,
             ref=decomp,
         )
+
+    def construct_name(self):
+        return self.decompose_name(self.decomposition)
