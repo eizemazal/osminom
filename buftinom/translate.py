@@ -1,3 +1,7 @@
+"""
+Translation package, will look for translation file, if exists, or creates a new one.
+"""
+
 import json
 import os
 from dataclasses import dataclass, field

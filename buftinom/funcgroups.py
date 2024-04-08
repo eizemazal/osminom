@@ -7,6 +7,8 @@ from osminom.atom import Atom
 
 
 class AtomParams(TypedDict):
+    """Params of how to treat the atom during the match process"""
+
     by: NotRequired[BondSymbol]
     symbol: str
     is_root: NotRequired[bool]
@@ -33,6 +35,12 @@ class GroupMatch:
 
 
 class Matcher:
+    """
+    This class creates a molecule pattern and,
+    given the molecule atom, checks if this pattern is matches at this position.
+
+    """
+
     def __init__(self, mol: Molecule, atom: AtomParams, tag: FunctionalGroup):
         self.mol = mol
         self.atom = atom
@@ -53,7 +61,11 @@ class Matcher:
         return self
 
     def matches(self, start: Atom) -> GroupMatch | None:
-        """Test if we can find matcher-defined structure starting from param atom"""
+        """
+        The mach function
+
+        Probe if we can find matcher-defined structure starting from param atom
+        """
         if not structcmp(start, self.atom):
             return None
 
@@ -90,6 +102,11 @@ class Matcher:
 
 
 class MatcherBuilder:
+    """
+    Utility to start building match patterns.
+    Attach a tag to the pattern to specify which functional group it matches
+    """
+
     def __init__(self, mol: Molecule, tag: FunctionalGroup):
         self.mol = mol
         self.tag = tag
@@ -105,6 +122,10 @@ class MatcherBuilder:
 
     def atom(self, **atom: Unpack[AtomParams]) -> Matcher:
         return Matcher(self.mol, atom, tag=self.tag)
+
+
+## Pattern definition
+#
 
 
 def alco_matcher(mol: Molecule):

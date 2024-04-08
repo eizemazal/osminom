@@ -73,6 +73,9 @@ def argmax_filter(iterable, include):
 
 
 def first_max(iterables: list[list[int]]):
+    """
+    See Iupac._fopod_many
+    """
     row_indexes = set(range(len(iterables)))
 
     for column in zip(*iterables):

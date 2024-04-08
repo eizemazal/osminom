@@ -1,0 +1,84 @@
+{
+    "alphabet": {
+        "min": "A",
+        "max": "z"
+    },
+    "root": {
+        "meth": "meth",
+        "eth": "eth",
+        "prop": "prop",
+        "but": "but",
+        "pent": "pent",
+        "hex": "hex",
+        "hept": "hept",
+        "oct": "oct",
+        "non": "non",
+        "dec": "dec",
+        "undec": "undec",
+        "dodec": "dodec",
+        "tridec": "tridec",
+        "tetradec": "tetradec",
+        "pentadec": "pentadec",
+        "hexadec": "hexadec",
+        "heptadec": "heptadec",
+        "octadec": "octadec",
+        "nonadec": "nonadec",
+        "icos": "icos"
+    },
+    "psuffix": {
+        "ane": {
+            "norm": "ane",
+            "short": "an"
+        },
+        "ene": {
+            "norm": "ene",
+            "short": "en"
+        },
+        "diene": {
+            "norm": "diene",
+            "short": "diene"
+        },
+        "yne": {
+            "norm": "yne",
+            "short": "yn"
+        },
+        "diyne": {
+            "norm": "diyne",
+            "short": "diyne"
+        },
+        "enyne": {
+            "norm": "enyne",
+            "short": "enyne"
+        }
+    },
+    "functional-group": {
+        "carboxylic-acid": "oic acid",
+        "amide": "amide",
+        "nitrite": "nitrite",
+        "al": "al",
+        "one": "one",
+        "ol": "ol",
+        "thiol": "thiol",
+        "amine": "amine",
+        "imine": "imine"
+    },
+    "prefix": {
+        "yl": "yl"
+    },
+    "multiplying": {
+        "di": "di",
+        "tri": "tri",
+        "tetra": "tetra",
+        "penta": "penta",
+        "bis": "bis",
+        "tris": "tris",
+        "tetrakis": "tetrakis",
+        "pentakis": "pentakis"
+    },
+    "infix": {
+        "cyclo": "cyclo",
+        "spiro": "spiro",
+        "bicyclo": "bicyclo"
+    },
+    "empty": ""
+}

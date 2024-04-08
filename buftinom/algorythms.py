@@ -1,7 +1,6 @@
 import heapq
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from enum import Enum
 from functools import cached_property, lru_cache
 from typing import Generator, TypeAlias
 
@@ -29,19 +28,12 @@ def reversechain(chain: Chain) -> Chain:
     return list(reversed(chain))
 
 
-class FpodReliability(Enum):
-    UNKNOWN = "Unknown"
-    UNSURE = "Unsure"
-    RELIABLE = "100%"
-
-
 @dataclass
 class MolDecomposition:
     chain: Chain
     connections: dict[Atom, list["MolDecomposition"]]
     functional_groups: dict[Atom, list[GroupMatch]]
     is_cycle: bool
-    fpod: FpodReliability = FpodReliability.UNKNOWN
 
     def print(self, level=0):
         print(self.chain)
@@ -71,7 +63,6 @@ class MolDecomposition:
             connections=self.connections,
             functional_groups=self.functional_groups,
             is_cycle=self.is_cycle,
-            fpod=self.fpod,
         )
 
 
@@ -82,12 +73,29 @@ class ChainGroup:
 
 
 class Alogrythms:
+    """
+    A class that represents algorithms for working with molecules.
+
+    This class provides various algorithms for analyzing and manipulating molecules.
+    It includes methods for finding cycles, calculating distances, identifying functional groups,
+    and generating subchains, among others.
+    """
+
     def __init__(self, mol: Molecule):
         self.mol = mol
         self.chains: list[Chain] = []
 
     @cached_property
     def leafs(self):
+        """Find 'leafs' of the molecule.
+
+        An atom considered a leaf if it is
+        - end of the chain,
+        - not the atom of the functional group
+        - atom of the cycle (only one needed)
+
+        This leafs will be the bounds of the primary and side chains
+        """
         if len(self.mol.atoms) == 1:
             return [self.mol.atoms[0]]
 
@@ -121,6 +129,13 @@ class Alogrythms:
 
     @cached_property
     def functional_groups(self):
+        """Matching and finding functional groups of the molecule
+
+        Matching is ordered, so the first found group of the atom
+        will take priority
+
+        Limitations: one functional group to one atom
+        """
         matchers = get_matchers(self.mol)
 
         result: dict[Atom, GroupMatch] = {}
@@ -135,6 +150,7 @@ class Alogrythms:
 
     @cached_property
     def functional_group_atoms(self):
+        """Lil helper, returns atoms of the functional groups, excluding root atoms"""
         atoms: set[Atom] = set()
         for func_group in self.functional_groups.values():
             group_atoms = func_group.atoms
@@ -153,7 +169,11 @@ class Alogrythms:
 
     @cached_property
     def cycles(self) -> list[Chain]:
-        """BFS/ modified Johnson's algorithm for undirected graph"""
+        """BFS/ modified Johnson's algorithm for undirected graph
+
+        Find **all** cycles of the atom. It will be minimal-sized cycles
+        without nested cycles (cycles that contain other cycles inside)
+        """
         adj = self.mol.adj
         atoms = self.mol.atoms
         adjset = {atom: set(connections) for atom, connections in adj.items()}
@@ -203,7 +223,10 @@ class Alogrythms:
         ignore_start: set[Atom] = None,
         always_ignore: set[Atom] = None,
     ) -> Chain:
-        """bfs"""
+        """bfs, shortest cycle
+
+        Takes additional params, used by self.cycles to modify search to ignore already found cycles
+        """
         if always_ignore is None:
             always_ignore = set()
 
@@ -239,7 +262,7 @@ class Alogrythms:
         return []
 
     def unfold_cycle(self, predc: dict[Atom, Atom], start: Atom, end: Atom) -> Chain:
-        """Since we use bfs cycle will look like a collar"""
+        """Since we use bfs cycle will look like a collar, make it a ring"""
         left = [end]
         right = [start]
 
@@ -306,7 +329,7 @@ class Alogrythms:
 
     @cached_property
     def leaf_distances(self):
-        """Calculate distances between all leaf atoms"""
+        """Calculate distances between all leaf atoms, using self.distances_from"""
         leafs = self.leafs
         leaf_distances: dict[ChainKey, float] = {}
 
@@ -334,6 +357,8 @@ class Alogrythms:
             return [[a]]
 
         return self.chains
+
+    ## Begin score functions to calculate the priorities for selecting primary chain
 
     def chain_count_functional_group(self, chain: Chain):
         i = 0
@@ -369,7 +394,12 @@ class Alogrythms:
             nneighbors += len(neighbors)
         return nneighbors
 
+    ## End score functions
+
     def max_chain(self, chains: list[Chain]) -> Chain:
+        """
+        Scores the chains by the priorities, and filter untill the main chain is selected
+        """
         max_chains = filter_max(chains, self.chain_count_functional_group)
         max_chains = filter_max(max_chains, self.chain_cycle)
         max_chains = filter_max(max_chains, self.chain_length)
@@ -381,6 +411,11 @@ class Alogrythms:
         return max_chain
 
     def orient_by_leafs(self, chains: list[Chain]) -> list[Chain]:
+        """
+        Rotate chains, so the leaf atom will be the first atom
+
+        Usefull to find connections with other chains
+        """
         leafs = self.leafs
         oriented: list[Chain] = []
 
@@ -394,8 +429,11 @@ class Alogrythms:
         return oriented
 
     def stripchains(self, chains: list[Chain], chain: Chain):
-        """Generate all subchains
+        """Generate all subchains.
         All subchains will start with leaf, and end on the input chain
+
+        Removes atoms of param:chain from the param:chains,
+        but keeps the atom that connects chains
         """
         chain_atoms = set(chain)
         chains = self.orient_by_leafs(chains)
@@ -427,6 +465,9 @@ class Alogrythms:
         return splits
 
     def group_by_ends(self, chains: list[Chain]):
+        """
+        If chains end on the same atom - group them - store that relation
+        """
         grouped: dict[Atom, list[Chain]] = defaultdict(list)
 
         for chain in chains:
@@ -440,7 +481,9 @@ class Alogrythms:
         return grouped
 
     def interconneced(self, chains: list[Chain]) -> list[list[Chain]]:
-        """Split chains by in graph components they in"""
+        """
+        Split chains by graph components they in
+        """
         if len(chains) == 1:
             return [chains]
         first_chain, *chains = chains
@@ -464,8 +507,8 @@ class Alogrythms:
 
     def assert_not_implemented(self, cycles: list[Chain]):
         # level 1
-        if len(cycles) > 1:
-            raise AssertionError("Multiple cycles is not implemented")
+        # if len(cycles) > 1:
+        #     raise AssertionError("Multiple cycles are not implemented")
 
         # level 2
         for i, c1 in enumerate(cycles):
@@ -478,6 +521,9 @@ class Alogrythms:
                     )
 
     def chain_groups(self, chain: Chain):
+        """
+        Map the found functional groups to the root atom they are connected to
+        """
         chain_atoms = set(chain)
         return {
             atom: group
@@ -486,6 +532,15 @@ class Alogrythms:
         }
 
     def decompose(self):
+        """
+        Crate decomposition of the Molecule
+
+        This is the main payload of the class.
+        Creates MoleculeDecomposition object that contains recursive
+        information about Molecule connections, functional groups and subchains.
+
+        Decomposition selects IUPAC-correct primary chain and subchains.
+        """
         chains = self.all_chains
         cycles = self.cycles
         self.assert_not_implemented(cycles)

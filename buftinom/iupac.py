@@ -56,14 +56,16 @@ def s(obj):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class IupacName:
+    """
+    Structured IUPAC name representation
+    """
+
     prefixes: list[Subn] = field(default_factory=list)
     infix: WordForm = None
     root_word: WordForm
     prime_suffixes: list[Synt]
     sub_suffix: WordForm = None
     func_suffixes: list[Synt]
-
-    ref: MolDecomposition
 
     def __repr__(self):
         return "".join(
@@ -95,6 +97,10 @@ def manyidx2str(name: WordForm, ids: list[int], form: Literal["short", "norm"]):
 
 
 def suffixes2str(suffixes: list[Synt], form: Literal["short", "norm"]):
+    """
+    Joins the given suffixes to string, selects appropriate word forms,
+    Sorts them by chaind indexes, follows IUPAC grammar for indexes and names
+    """
     if not suffixes:
         return [], None
 
@@ -135,6 +141,10 @@ def all_suffixes2str(iupac: IupacName):
 
 
 def preffixes2str(iupac: IupacName):
+    """
+    Joins the preffixes of the IupacName to string, selects appropriate word forms,
+    Sorts them by chaind indexes, follows IUPAC grammar for indexes and names
+    """
     preffixes = iupac.prefixes
     if not preffixes:
         return None
@@ -181,7 +191,12 @@ def preffixes2str(iupac: IupacName):
     return "-".join(res)
 
 
-def iupac2str(iupac: IupacName):
+def iupac2str(iupac: IupacName) -> str:
+    """
+    The iupac2str method.
+
+    Converts structural representation of the IupacName to grammatically correct string
+    """
     preffix = preffixes2str(iupac)
     infix = iupac.infix
     root = iupac.root_word.norm
@@ -214,6 +229,11 @@ class DecFeatures:
 
 
 class Iupac:
+    """
+    Build Iupac structured representation of the molecule.
+    Uses Algorythms class to create decomposition and give names to decomposed parts
+    """
+
     def __init__(self, mol: Molecule):
         self.mol = mol
 
@@ -228,6 +248,11 @@ class Iupac:
     def features(
         self, decomp: MolDecomposition, subiupacs: dict[Atom, list[IupacName]]
     ):
+        """
+        Collect features of the decomposed chain.
+
+        Spectial attention to cycles, their representation contains bonds between the edges of the chain
+        """
         chain = decomp.chain
 
         if decomp.is_cycle:
@@ -245,6 +270,9 @@ class Iupac:
             )
 
     def suffixes_by_features(self, features: list[AtomFeatures], *, primary: bool):
+        """
+        Find which primary suffixes should be used based on the bonds of the chain
+        """
         result = []
 
         for feature in features:
@@ -260,6 +288,9 @@ class Iupac:
         return result
 
     def functional_suffixes(self, features: list[AtomFeatures]):
+        """
+        Collect all functional suffixed of the chain based on the functional groups it have
+        """
         result = []
         for f in features:
             if f.functional_group:
@@ -267,6 +298,9 @@ class Iupac:
         return result
 
     def preffixes(self, dec: MolDecomposition):
+        """
+        Recursively find preffixes of the Iupac name.
+        """
         result: dict[Atom, list[IupacName]] = defaultdict(list)
         for atom in dec.chain:
             subchains = dec.connections.get(atom, [])
@@ -282,6 +316,9 @@ class Iupac:
     def index_preffixes(
         self, features: list[AtomFeatures], all_preffixes: dict[Atom, list[IupacName]]
     ):
+        """
+        Give indexes to the found preffixes
+        """
         result = []
 
         for feature in features:
@@ -289,6 +326,9 @@ class Iupac:
                 for preffix in preffixes:
                     result.append(Subn(feature.chain_index, preffix))
         return result
+
+    # Begin fpod
+    #
 
     PRIORITIES = {
         BondType.SINGLE: 0,
@@ -335,6 +375,23 @@ class Iupac:
         return alphabetical
 
     def fpod(self, decomp: MolDecomposition, preffixes: dict[Atom, list[IupacName]]):
+        """
+        First Point of Difference
+
+        The algorythm to determine the Numbering of the chain.
+
+        Short rule is:
+        1. Primary functional group is the king, it have the least number
+        2. Double and Triple bonds have second prio
+        3. Weak functional groups next
+        4. Afther that - Subchains.
+        5. Other collisions resolved alphabetically
+
+        We test every possible chain numberings to see which higher priority is matches
+        And select numbering appropriately.
+
+        For the acyclic chain all possibilities are - straight or reversed numbering
+        """
         if decomp.is_cycle:
             return self.fpod_cycle(decomp, preffixes)
 
@@ -346,6 +403,13 @@ class Iupac:
     def fpod_cycle(
         self, decomp: MolDecomposition, preffixes: dict[Atom, list[IupacName]]
     ):
+        """
+        Cycles is a special case.
+        We first look for any priority features,
+
+        The fpod then is preformed with this feature as the first atom of the chain.
+        And the position wins if in the end it'll have the best priority fit.
+        """
         features = list(self.features(decomp, preffixes))
 
         priorities = [
@@ -389,6 +453,24 @@ class Iupac:
     def _fpod_many(
         self, preffixes: dict[Atom, list[IupacName]], decs: list[MolDecomposition]
     ):
+        """
+        Quite a heavy method, ain't it?
+
+        For each given decomposition, compare features that it provides
+        to select decomposition with the **first point of dfference**
+
+        Example: assume we have CCC=C=C
+        Considering two names pent-1,2-diene / pent-3,4-diene
+        Bond scores will look like:
+        [0, 0, 2, 2] - for CC=C=C
+        [0, 2, 2, 0] - for reversed C=C=CC
+
+        algo will go through the columns of this table and
+        find the first column that will signal that it have score with highest prio
+
+        in the examle it'll find that the best fit is second column second row,
+        and we'll select reversed decomposition.
+        """
         features = [
             DecFeatures(dec, list(self.features(dec, preffixes))) for dec in decs
         ]
@@ -425,7 +507,13 @@ class Iupac:
         #
         return features[0].as_tuple()
 
+    #
+    # End fpod
+
     def decompose_name(self, decomp: MolDecomposition, *, primary: bool = True):
+        """
+        Recursively convert given decomposition to the IupacName.
+        """
         #
         unordered_preffixes = self.preffixes(decomp)
         #
@@ -445,8 +533,10 @@ class Iupac:
             prime_suffixes=suffix,
             sub_suffix=subsuff,
             func_suffixes=func_suffixes,
-            ref=decomp,
         )
 
     def construct_name(self):
+        """
+        Convert decomposition to the IupacName.
+        """
         return self.decompose_name(self.decomposition)

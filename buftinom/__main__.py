@@ -1,3 +1,12 @@
+"""
+    smiles2iupac script,
+
+    invoke with
+
+    ```bash
+    python -m buftinom --help
+    ```
+"""
 import argparse
 from dataclasses import dataclass
 
