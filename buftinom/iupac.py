@@ -64,7 +64,7 @@ class IupacName:
     infix: WordForm = None
     root_word: WordForm
     prime_suffixes: list[Synt]
-    sub_suffix: WordForm = None
+    sub_suffix: Synt = None
     func_suffixes: list[Synt]
 
     def __repr__(self):
@@ -101,6 +101,7 @@ def suffixes2str(suffixes: list[Synt], form: Literal["short", "norm"]):
     Joins the given suffixes to string, selects appropriate word forms,
     Sorts them by chaind indexes, follows IUPAC grammar for indexes and names
     """
+    suffixes = [s for s in suffixes if s]
     if not suffixes:
         return [], None
 
@@ -125,12 +126,13 @@ def suffixes2str(suffixes: list[Synt], form: Literal["short", "norm"]):
 
 def all_suffixes2str(iupac: IupacName):
     primes, lastprime = suffixes2str(iupac.prime_suffixes, form="short")
+    subs, _ = suffixes2str([iupac.sub_suffix], form="norm")
     functionals, _ = suffixes2str(iupac.func_suffixes, form="norm")
 
     res = primes
 
-    if iupac.sub_suffix:
-        res.append(iupac.sub_suffix.norm)
+    if subs:
+        res.extend(subs)
     if functionals:
         res.extend(functionals)
 
@@ -210,7 +212,8 @@ class AtomFeatures:
     chain_index: int
     atom: Atom
     bond_ahead: Bond
-    subciupacs: list[IupacName]
+    connected_parent: Atom
+    subiupacs: list[IupacName]
     functional_group: GroupMatch | None
 
 
@@ -219,6 +222,7 @@ class DecFeatures:
     dec: MolDecomposition
     fs: list[AtomFeatures]
 
+    connected_scores: list[int] = field(default_factory=list)
     group_scores: list[int] = field(default_factory=list)
     bond_scores: list[int] = field(default_factory=list)
     weak_group_scores: list[int] = field(default_factory=list)
@@ -254,6 +258,7 @@ class Iupac:
         Spectial attention to cycles, their representation contains bonds between the edges of the chain
         """
         chain = decomp.chain
+        parent_connections = self.mol.adj_set.get(decomp.connected_by, set())
 
         if decomp.is_cycle:
             chain: Chain = decomp.chain + (decomp.chain[0],)
@@ -261,12 +266,34 @@ class Iupac:
         for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
             bond = self.mol.bonds[(a1, a2)]
 
+            parent = None
+            if a1 in parent_connections:
+                parent = decomp.connected_by
+
             yield AtomFeatures(
                 chain_index=i,
                 atom=a1,
                 bond_ahead=bond,
-                subciupacs=subiupacs.get(a1),
+                subiupacs=subiupacs.get(a1),
                 functional_group=decomp.functional_groups.get(a1),
+                connected_parent=parent,
+            )
+
+        # Do not forget the last atom of the chain
+        if not decomp.is_cycle:
+            last = chain[-1]
+
+            parent = None
+            if last in parent_connections:
+                parent = decomp.connected_by
+
+            yield AtomFeatures(
+                chain_index=len(chain),
+                atom=last,
+                bond_ahead=None,
+                subiupacs=subiupacs.get(last),
+                functional_group=decomp.functional_groups.get(last),
+                connected_parent=parent,
             )
 
     def suffixes_by_features(self, features: list[AtomFeatures], *, primary: bool):
@@ -276,6 +303,9 @@ class Iupac:
         result = []
 
         for feature in features:
+            if feature.bond_ahead is None:
+                continue
+
             if feature.bond_ahead.type == BondType.DOUBLE:
                 result.append(Synt(feature.chain_index, PrimarySuffix.ENE.value))
 
@@ -286,6 +316,18 @@ class Iupac:
             result.append(Synt(1, PrimarySuffix.ANE.value))
 
         return result
+
+    def subsuffix(self, features: list[AtomFeatures], connector: Atom, primary: bool):
+        if primary:
+            return None
+
+        for feature in features:
+            if feature.connected_parent:
+                return Synt(feature.chain_index, Prefix.YL.value)
+
+        raise AssertionError(
+            f"Connector {connector} is not connected to the chain {features}"
+        )
 
     def functional_suffixes(self, features: list[AtomFeatures]):
         """
@@ -338,8 +380,13 @@ class Iupac:
         "functional-group": 4,
     }
 
+    def feature_connected(self, feature: AtomFeatures):
+        return int(feature.connected_parent is not None)
+
     def feature_bonds(self, feature: AtomFeatures):
-        return Iupac.PRIORITIES.get(feature.bond_ahead.type)
+        if feature.bond_ahead is None:
+            return 0
+        return Iupac.PRIORITIES.get(feature.bond_ahead.type, 0)
 
     def feature_group(self, feature: AtomFeatures):
         prio = Iupac.PRIORITIES
@@ -366,8 +413,8 @@ class Iupac:
 
     def feature_subchain(self, feature: AtomFeatures):
         alphabetical = 0
-        if feature.subciupacs:
-            for sub in feature.subciupacs:
+        if feature.subiupacs:
+            for sub in feature.subiupacs:
                 # handle for complex radicals
                 alphabetical = max(alphabetical, ord(sub.root_word.norm[0]))
 
@@ -413,6 +460,7 @@ class Iupac:
         features = list(self.features(decomp, preffixes))
 
         priorities = [
+            self.feature_connected,
             self.feature_group,
             self.feature_bonds,
             self.feature_weak_group,
@@ -477,6 +525,13 @@ class Iupac:
 
         #
         for decfs in features:
+            decfs.connected_scores = list(map(self.feature_connected, decfs.fs))
+
+        i = first_max([d.connected_scores for d in features])
+        if i is not None:
+            return features[i].as_tuple()
+        #
+        for decfs in features:
             decfs.group_scores = list(map(self.feature_group, decfs.fs))
 
         i = first_max([d.group_scores for d in features])
@@ -524,7 +579,7 @@ class Iupac:
         suffix = self.suffixes_by_features(features, primary=primary)
         func_suffixes = self.functional_suffixes(features)
         infix = Infix.CYCLO.value if decomp.is_cycle else None
-        subsuff = Prefix.YL.value if not primary else None
+        subsuff = self.subsuffix(features, decomp.connected_by, primary)
 
         return IupacName(
             prefixes=preffixes,

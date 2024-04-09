@@ -75,9 +75,9 @@ def test_decomposed_multichain(parser, smiles, expected):
     [
         ("CCC(C)(C)CCC", "3,3-dimethylhexane"),
         ("CCC(C)CC(C)CC", "3,5-dimethylheptane"),
-        ("CCCCC(C(C)C)CCCCC", "5-(1-methylethyl)decane"),
+        ("CCCCC(C(C)C)CCCCC", "5-prop-2-yldecane"),
         ("CCC(C)C(C(C)CC)CCC", "3,5-dimethyl-4-propylheptane"),
-        ("CCC(C)C(C(C)C)C=C", "3-(1-methylethyl)-4-methylhexene"),
+        ("CCC(C)C(C(C)C)C=C", "4-methyl-3-prop-2-ylhexene"),
         ("CCC(C)C(C(C)CC)C=C", "4-ethenyl-3,5-dimethylheptane"),
         ("CCC(C)C(C)CCCCC(C)C", "2,7,8-trimethyldecane"),
         ("CCCC(C)C(CC)CCC", "4-ethyl-5-methyloctane"),
@@ -86,10 +86,10 @@ def test_decomposed_multichain(parser, smiles, expected):
         ("CC=CCC#CC", "hept-2-en-5-yne"),
         ("C(C)(C)C(C)(C)", "2,3-dimethylbutane"),
         ("C(C)(C)C(C)(C)CCC", "2,3,3-trimethylhexane"),
-        ("CCCCC(C(C)C(C)C)(C(C)C(C)C)CCCC", "5,5-bis(1,2-dimethylpropyl)nonane"),
+        ("CCCCC(C(C)C(C)C)(C(C)C(C)C)CCCC", "5,5-bis(3-methylbut-2-yl)nonane"),
         ("CCCC(C(C)(C)C)CC", "3-ethyl-2,2-dimethylhexane"),
         ("CCCCC(C(C)C(C)CC)C(CC)CCC", "5-butyl-6-ethyl-3,4-dimethylnonane"),
-        ("CCCCCC(C(C)C(C)CC)C(CC)CCCC", "6-(1,2-dimethylbutyl)-5-ethylundecane"),
+        ("CCCCCC(C(C)C(C)CC)C(CC)CCCC", "6-(3-methylpent-2-yl)-5-ethylundecane"),
     ],
 )
 def test_various_molecules(parser, smiles, expected):
@@ -135,6 +135,8 @@ def test_cycle_names(parser, smiles, expected):
         ("CCCN", "propanamine"),
         ("CC(C)CCCO", "4-methylpentanol"),
         ("C1CCC(O)CC1", "cyclohexanol"),
+        ("C1CCCCC1C2CCCC2", "1-cyclopentylcyclohexane"),
+        ("C1CCCCC1CC2CCCC2", "1-(1-cyclopentylmethyl)cyclohexane"),
     ],
 )
 def test_functional_group_naming(parser, smiles, expected):

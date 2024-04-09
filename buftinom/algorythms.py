@@ -1,7 +1,7 @@
 import heapq
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from functools import cached_property, lru_cache
+from functools import cached_property, lru_cache, partial
 from typing import Generator, TypeAlias
 
 from buftinom.funcgroups import GroupMatch, get_matchers
@@ -33,6 +33,8 @@ class MolDecomposition:
     chain: Chain
     connections: dict[Atom, list["MolDecomposition"]]
     functional_groups: dict[Atom, list[GroupMatch]]
+    # if it is subchain we indicate to which atom it is connected
+    connected_by: Atom | None
     is_cycle: bool
 
     def print(self, level=0):
@@ -63,6 +65,7 @@ class MolDecomposition:
             connections=self.connections,
             functional_groups=self.functional_groups,
             is_cycle=self.is_cycle,
+            connected_by=self.connected_by,
         )
 
 
@@ -120,10 +123,10 @@ class Alogrythms:
                 leafs.append(atom)
 
         # Take one point from the cycle
-        # so we can track chainded connections from the to and the cycles
+        # so we can track chained connections from the to and the cycles
         # and between-the-circle chains
-        for cycle in cycles:
-            leafs.append(cycle[0])
+        # for cycle in cycles:
+        #     leafs.append(cycle[0])
 
         return leafs
 
@@ -360,6 +363,16 @@ class Alogrythms:
 
     ## Begin score functions to calculate the priorities for selecting primary chain
 
+    def chain_have_connection(self, atom_conntecor: Atom | None, chain: Chain):
+        if atom_conntecor is None:
+            return 0
+
+        atom_conns = self.mol.adj_set[atom_conntecor]
+        for atom in chain:
+            if atom in atom_conns:
+                return 1
+        return 0
+
     def chain_count_functional_group(self, chain: Chain):
         i = 0
         for atom in chain:
@@ -396,11 +409,12 @@ class Alogrythms:
 
     ## End score functions
 
-    def max_chain(self, chains: list[Chain]) -> Chain:
+    def max_chain(self, chains: list[Chain], connection: Atom = None) -> Chain:
         """
         Scores the chains by the priorities, and filter untill the main chain is selected
         """
-        max_chains = filter_max(chains, self.chain_count_functional_group)
+        max_chains = filter_max(chains, partial(self.chain_have_connection, connection))
+        max_chains = filter_max(max_chains, self.chain_count_functional_group)
         max_chains = filter_max(max_chains, self.chain_cycle)
         max_chains = filter_max(max_chains, self.chain_length)
         max_chains = filter_max(max_chains, self.chain_bonds)
@@ -451,59 +465,101 @@ class Alogrythms:
 
                 if not buffer:
                     continue
+                break
 
-                buffer.append(atom)
-                key = chainkey(buffer)
-                if key not in existing:
-                    splits.append(list(buffer))
-                    existing.add(key)
-                    existing.add(reversekey(key))
-                    break
+            if not buffer:
+                continue
 
-                buffer = []
+            if self.chain_cycle(buffer):
+                splits.append(buffer)
+                continue
+
+            key = chainkey(buffer)
+            if key not in existing:
+                splits.append(buffer)
+                existing.add(key)
+                existing.add(reversekey(key))
 
         return splits
 
-    def group_by_ends(self, chains: list[Chain]):
+    def connection_point(self, group: list[Chain], base_chain: Chain):
         """
-        If chains end on the same atom - group them - store that relation
+        Reutrn Atom by which this group connected to the chain
         """
-        grouped: dict[Atom, list[Chain]] = defaultdict(list)
+        adj = self.mol.adj_set
+        chain_atoms = set(base_chain)
+
+        connections: set[Atom] = set()
+
+        for chain in group:
+            for atom in chain:
+                conns = adj[atom] & chain_atoms
+                if conns:
+                    connections |= conns
+                    break
+
+        # It is not supported yet bicyclo case
+        assert len(connections) == 1, connections
+        return connections.pop()
+
+    def group_connections(self, groups: list[list[Chain]], chain: Chain):
+        """
+        for each group return atom by which this group connected to the chain
+        """
+        res: list[tuple[Atom, list[Chain]]] = []
+        for group in groups:
+            connector = self.connection_point(group, chain)
+            res.append((connector, group))
+        return res
+
+    def chain_in_component(self, chain: Chain, component: set[Atom]):
+        for atom in chain:
+            if atom in component:
+                return True
+
+    def group_by_components(self, chains: list[Chain], components: list[set[Atom]]):
+        """
+        Return chains components by graph components formed by stripping chain from the graph
+        """
+        groups: list[list[Chain]] = []
+        for _ in range(len(components)):
+            groups.append([])
 
         for chain in chains:
-            assert len(chain) > 1, chain
-            *chain, end = chain
+            for i, component in enumerate(components):
+                if self.chain_in_component(chain, component):
+                    groups[i].append(chain)
+                    break
 
-            # reverse to orient the chain from the groupping atom forward
-            # no real effect, just easier to understand for humans
-            grouped[end].append(reversechain(chain))
+        return [g for g in groups if g]
 
-        return grouped
-
-    def interconneced(self, chains: list[Chain]) -> list[list[Chain]]:
+    def components(self, chains: list[Chain]):
         """
-        Split chains by graph components they in
+        Return components of the graph formed by stripping chain
         """
-        if len(chains) == 1:
-            return [chains]
-        first_chain, *chains = chains
-        groups = [ChainGroup(matcher=set(first_chain), chains=[first_chain])]
-
+        atoms: set[Atom] = set()
         for chain in chains:
-            chain_atoms = set(chain)
-            in_existed_group = False
-            for group in groups:
-                if chain_atoms & group.matcher:
-                    group.chains.append(chain)
-                    group.matcher |= set(chain)
-                    in_existed_group = True
+            atoms |= set(chain)
 
-            if in_existed_group:
-                continue
+        visited: set[Atom] = set()
+        adj = self.mol.adj
 
-            groups.append(ChainGroup(matcher=set(chain), chains=[chain]))
+        def dfs(atom: Atom):
+            visited.add(atom)
+            component = {atom}
 
-        return [g.chains for g in groups]
+            for neighbor in adj[atom]:
+                if neighbor in atoms and neighbor not in visited:
+                    component |= dfs(neighbor)
+
+            return component
+
+        components = []
+        for atom in atoms:
+            if atom not in visited:
+                components.append(dfs(atom))
+
+        return components
 
     def assert_not_implemented(self, cycles: list[Chain]):
         # level 1
@@ -520,7 +576,7 @@ class Alogrythms:
                         f"Intersecting cycles are not implemented \n{c1} \n{c2}"
                     )
 
-    def chain_groups(self, chain: Chain):
+    def chain_functional_groups(self, chain: Chain):
         """
         Map the found functional groups to the root atom they are connected to
         """
@@ -545,24 +601,26 @@ class Alogrythms:
         cycles = self.cycles
         self.assert_not_implemented(cycles)
 
-        def _decompose(chains: list[Chain]):
+        def _decompose(chains: list[Chain], parent_connection: Atom):
             connections: dict[Atom, list[Chain]] = defaultdict(list)
 
-            max_chain = self.max_chain(chains)
+            max_chain = self.max_chain(chains, parent_connection)
             subchains = self.stripchains(chains, max_chain)
-            groupped = self.group_by_ends(subchains)
+            components = self.components(subchains)
+            chain_groups = self.group_by_components(subchains, components)
+            groups = self.group_connections(chain_groups, max_chain)
 
-            for connection, groupped_chains in groupped.items():
-                for chaingroup in self.interconneced(groupped_chains):
-                    connections[connection].append(_decompose(chaingroup))
+            for connection, groupped_chains in groups:
+                connections[connection].append(_decompose(groupped_chains, connection))
 
-            groups = self.chain_groups(max_chain)
+            func_groups = self.chain_functional_groups(max_chain)
 
             return MolDecomposition(
                 chain=tuple(max_chain),
                 connections=connections,
                 is_cycle=self.chain_cycle(max_chain),
-                functional_groups=groups,
+                connected_by=parent_connection,
+                functional_groups=func_groups,
             )
 
-        return _decompose(chains + cycles)
+        return _decompose(cycles + chains, None)

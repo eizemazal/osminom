@@ -121,6 +121,10 @@ class Molecule:
     def adj(self):
         return self.table2list()
 
+    @cached_property
+    def adj_set(self):
+        return {a: set(conns) for a, conns in self.adj.items()}
+
     def print_table(self):
         w = max(len(str(a)) for a in self._atoms) + 2
 

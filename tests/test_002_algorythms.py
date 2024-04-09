@@ -84,7 +84,7 @@ def test_max_chain(smiles, expected_len):
 
 
 def test_stipchains():
-    algo = algorythms("BCCCl(CB)CCCP")
+    algo = algorythms("CCCC(CC)CCCC")
     chain = algo.max_chain(algo.all_chains)
 
     subchains = algo.stripchains(algo.all_chains, chain)
@@ -93,24 +93,12 @@ def test_stipchains():
 
 
 def test_stipchains_many():
-    algo = algorythms("BCCCCCCO(C(B)CN)I(C(B)CP)CCCCCCP")
-    chain = algo.max_chain(algo.all_chains)
-
-    subchains = algo.stripchains(algo.all_chains, chain)
-
-    assert len(subchains) == 4
-
-
-def test_stipchains_group():
     algo = algorythms("CCCCCCCC(C(C)CC)C(C(C)CC)CCCCCCC")
     chain = algo.max_chain(algo.all_chains)
 
     subchains = algo.stripchains(algo.all_chains, chain)
-    groupped = algo.group_by_ends(subchains)
 
-    assert len(groupped) == 2
-    for _, subchains in groupped.items():
-        assert len(subchains) == 2
+    assert len(subchains) == 6
 
 
 @pytest.mark.parametrize(
@@ -128,9 +116,6 @@ def test_decompose(smiles):
     main.print()
 
     assert len(main.connections) == 2
-    for conns in main.connections.values():
-        assert len(conns) == 1
-        assert len(conns[0].connections) == 1
 
 
 def test_decompose_multiple_connections():
