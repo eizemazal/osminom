@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Literal, NamedTuple
+from typing import NamedTuple
 
 from buftinom.algorythms import (
     Alogrythms,
@@ -20,7 +20,7 @@ from buftinom.lookup import (
     PrimarySuffix,
 )
 from buftinom.smileg import Atom, Bond, BondType, Molecule
-from buftinom.translate import WordForm
+from buftinom.translate import WordForm, WordFormName
 from buftinom.utils import first_max, nonzero_indexes
 
 
@@ -83,20 +83,20 @@ class IupacName:
         )
 
 
-def singleidx2str(name: WordForm, idx: int, form: Literal["short", "norm"]):
+def singleidx2str(name: WordForm, idx: int, form: WordFormName):
     if idx > 1:
         return ["-", str(idx), "-", name.get(form)]
     else:
         return [name.get(form)]
 
 
-def manyidx2str(name: WordForm, ids: list[int], form: Literal["short", "norm"]):
+def manyidx2str(name: WordForm, ids: list[int], form: WordFormName):
     index = ",".join(map(str, ids))
     multi = MULTI_BY_PREFIX.get(len(ids))
     return ["-", index, "-", multi.value.norm, name.get(form)]
 
 
-def suffixes2str(suffixes: list[Synt], form: Literal["short", "norm"]):
+def suffixes2str(suffixes: list[Synt], form: WordFormName):
     """
     Joins the given suffixes to string, selects appropriate word forms,
     Sorts them by chaind indexes, follows IUPAC grammar for indexes and names
@@ -127,7 +127,11 @@ def suffixes2str(suffixes: list[Synt], form: Literal["short", "norm"]):
 def all_suffixes2str(iupac: IupacName):
     primes, lastprime = suffixes2str(iupac.prime_suffixes, form="short")
     subs, _ = suffixes2str([iupac.sub_suffix], form="norm")
-    functionals, _ = suffixes2str(iupac.func_suffixes, form="norm")
+    fform: WordFormName = "norm"
+    if subs:
+        fform = "sub"
+
+    functionals, _ = suffixes2str(iupac.func_suffixes, form=fform)
 
     res = primes
 
@@ -167,7 +171,7 @@ def preffixes2str(iupac: IupacName):
     for name, indexes in ordered:
         subname: list[str] = []
 
-        name_complex = name[0].isdigit()
+        name_complex = name[0].isdigit() or " " in name
         multiselector = MULTI_MULTI_BY_PREFIX if name_complex else MULTI_BY_PREFIX
 
         if indexes:

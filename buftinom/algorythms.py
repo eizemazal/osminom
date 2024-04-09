@@ -377,7 +377,8 @@ class Alogrythms:
         i = 0
         for atom in chain:
             if atom in self.functional_groups:
-                i += 1
+                # one is enough :)
+                i = 1
         return i
 
     def chain_cycle(self, chain: Chain):

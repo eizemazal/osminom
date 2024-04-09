@@ -52,7 +52,10 @@
         }
     },
     "functional-group": {
-        "carboxylic-acid": "oic acid",
+        "carboxylic-acid": {
+            "norm": "oic acid",
+            "sub": "carboxylic acid"
+        },
         "amide": "amide",
         "nitrite": "nitrite",
         "al": "al",

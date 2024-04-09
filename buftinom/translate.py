@@ -7,16 +7,19 @@ import os
 from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
-from typing import KeysView, Literal, TypedDict, Unpack
+from typing import Literal, TypedDict, Unpack
+
+type WordFormName = Literal["norm", "short", "sub"]
 
 
 @dataclass(frozen=True, eq=True, unsafe_hash=True, order=True)
 class WordForm:
     norm: str = field(compare=True)
     short: str = field(default=None, compare=False)
+    sub: str = field(default=None, compare=False)
 
-    def get(self, form: Literal["norm", "short"]):
-        return getattr(self, form)
+    def get(self, form: WordFormName):
+        return getattr(self, form) or self.norm
 
     def __str__(self):
         return self.norm
@@ -24,16 +27,9 @@ class WordForm:
     __repr__ = __str__
 
 
-class WordFromDict(TypedDict):
-    norm: str
-    short: str
-
-
-L = KeysView[WordFromDict]
-
-
 class FormParams(TypedDict):
     short: bool
+    sub: bool
 
 
 _REGISTERED_TRANSLATIONS = {}

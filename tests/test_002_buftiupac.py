@@ -137,6 +137,8 @@ def test_cycle_names(parser, smiles, expected):
         ("C1CCC(O)CC1", "cyclohexanol"),
         ("C1CCCCC1C2CCCC2", "1-cyclopentylcyclohexane"),
         ("C1CCCCC1CC2CCCC2", "1-(1-cyclopentylmethyl)cyclohexane"),
+        ("CCCC(C(=O)O)CCC(=O)O", "4-(methylcarboxylic acid)heptanoic acid"),
+        ("CCCC(CO)CCC(=O)O", "4-methylolheptanoic acid"),
     ],
 )
 def test_functional_group_naming(parser, smiles, expected):
