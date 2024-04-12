@@ -11,6 +11,7 @@ import argparse
 from dataclasses import dataclass
 
 from buftinom import Iupac, SmilesParser, iupac2str
+from buftinom.smileg import debug_atoms
 
 
 @dataclass
@@ -27,10 +28,16 @@ def parse_args():
     )
     arp.add_argument("smiles", help="molecule in smiles format")
     arp.add_argument(
-        "-v", "--verbose", help="show logs and debug info", action="store_true"
+        "-v",
+        "--verbose",
+        help="show logs and debug info",
+        action="store_true",
     )
     arp.add_argument(
-        "-q", "--quiet", help="print only final result", action="store_true"
+        "-q",
+        "--quiet",
+        help="print only final result (overrides -v)",
+        action="store_true",
     )
     args = AppArgs(**arp.parse_args().__dict__)
     if args.quiet:
@@ -41,6 +48,7 @@ def parse_args():
 
 def main():
     args = parse_args()
+    debug_atoms(args.verbose)
 
     parser = SmilesParser(debug=args.verbose)
 
