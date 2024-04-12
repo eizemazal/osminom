@@ -44,8 +44,8 @@ class PrimarySuffix(Enum):
 
 class FunctionalGroup(Enum):
     CARBOXYLIC_ACID = _("functional-group.carboxylic-acid", sub=True)
-    AMIDE = _("functional-group.amide")
-    NITRITE = _("functional-group.nitrite")
+    AMIDE = _("functional-group.amide", sub=True)
+    NITRILE = _("functional-group.nitrile", sub=True)
     ALDEHYDE = _("functional-group.al")
     KETONE = _("functional-group.one")
     ALCOHOL = _("functional-group.ol")

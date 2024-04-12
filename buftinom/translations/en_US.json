@@ -56,8 +56,14 @@
             "norm": "oic acid",
             "sub": "carboxylic acid"
         },
-        "amide": "amide",
-        "nitrite": "nitrite",
+        "amide": {
+            "norm": "amide",
+            "sub": "carboxamide"
+        },
+        "nitrile": {
+            "norm": "nitrile",
+            "sub": "carbonitrile"
+        },
         "al": "al",
         "one": "one",
         "ol": "ol",

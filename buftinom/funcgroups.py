@@ -129,6 +129,7 @@ class MatcherBuilder:
 
 
 def alco_matcher(mol: Molecule):
+    """C-O"""
     match = MatcherBuilder(mol, FunctionalGroup.ALCOHOL)
 
     matcher = match.chain(
@@ -151,12 +152,76 @@ def acid_matcher(mol: Molecule):
 
 
 def amine_matcher(mol: Molecule):
+    """C - N"""
     match = MatcherBuilder(mol, FunctionalGroup.AMINE)
 
     return match.chain(
         match.atom(symbol="N"),
         match.atom(by="-", symbol="C", is_root=True),
     )
+
+
+def imine_matcher(mol: Molecule):
+    """C = N"""
+    match = MatcherBuilder(mol, FunctionalGroup.IMINE)
+
+    return match.chain(
+        match.atom(symbol="N"),
+        match.atom(by="=", symbol="C", is_root=True),
+    )
+
+
+def nitrile_matcher(mol: Molecule):
+    """C # N"""
+    match = MatcherBuilder(mol, FunctionalGroup.NITRILE)
+
+    return match.chain(
+        match.atom(symbol="N"),
+        match.atom(by="#", symbol="C", is_root=True),
+    )
+
+
+def acid_amide_matcher(mol: Molecule):
+    """O = C - N"""
+    match = MatcherBuilder(mol, FunctionalGroup.AMIDE)
+
+    return match.chain(
+        match.atom(symbol="O"),
+        match.atom(by="=", symbol="C", is_root=True),
+        match.atom(by="-", symbol="N"),
+    )
+
+
+def ketone_matcher(mol: Molecule):
+    """- O -"""
+    match = MatcherBuilder(mol, FunctionalGroup.AMIDE)
+
+    return match.chain(
+        match.atom(symbol="C"),
+        match.atom(by="-", symbol="O", is_root=True),
+        match.atom(by="-", symbol="C"),
+    )
+
+
+def get_matchers(molecule: Molecule):
+    """Return matchers in priority order.
+
+    For examle since acid matcher presceeds alco matcher
+    we guarantee that COOH is matching before CO, and selected first (if matched)
+    which would cause collision otherwise (because CO always matches if COOH matches)
+    """
+    return [
+        acid_amide_matcher(molecule),
+        acid_matcher(molecule),
+        # ketone_matcher(molecule),
+        alco_matcher(molecule),
+        amine_matcher(molecule),
+        imine_matcher(molecule),
+        nitrile_matcher(molecule),
+    ]
+
+
+# Extra
 
 
 def acid_matcher2(mol: Molecule):
@@ -176,17 +241,3 @@ def acid_matcher2(mol: Molecule):
             match.atom(by="-", symbol="O"),
         ),
     )
-
-
-def get_matchers(molecule: Molecule):
-    """Return matchers in priority order.
-
-    For examle since acid matcher presceeds alco matcher
-    we guarantee that COOH is matching before CO, and selected first (if matched)
-    which would cause collision otherwise (because CO always matches if COOH matches)
-    """
-    return [
-        acid_matcher(molecule),
-        alco_matcher(molecule),
-        amine_matcher(molecule),
-    ]

@@ -7,9 +7,18 @@ from buftinom.smiles_parser import SmilesParser
 debug_atoms(True)
 
 
-@pytest.fixture
-def parser():
-    return SmilesParser(debug=True)
+def get_name(smiles):
+    (mol,) = SmilesParser(debug=True).parse(smiles)
+    iupac = Iupac(mol)
+
+    mol.print_table()
+    iupac.decomposition.print()
+    for f in iupac.alg.functional_groups.items():
+        print(f)
+
+    name = iupac2str(iupac.construct_name())
+    print(name)
+    return name
 
 
 @pytest.mark.parametrize(
@@ -40,12 +49,8 @@ def parser():
         ("CC=C=CC", "pent-2,3-diene"),
     ],
 )
-def test_simple_chain_name(parser, smiles, expected):
-    (mol,) = parser.parse(smiles)
-    iupac = Iupac(mol)
-    name = iupac.decompose_name(iupac.decomposition)
-
-    assert iupac2str(name) == expected
+def test_simple_chain_name(smiles, expected):
+    assert get_name(smiles) == expected
 
 
 @pytest.mark.parametrize(
@@ -59,15 +64,8 @@ def test_simple_chain_name(parser, smiles, expected):
         ("CCCCC(CC)C(C)CCC", "5-ethyl-4-methylnonane"),
     ],
 )
-def test_decomposed_multichain(parser, smiles, expected):
-    (mol,) = parser.parse(smiles)
-    iupac = Iupac(mol)
-
-    mol.print_table()
-    iupac.decomposition.print()
-
-    name = iupac.decompose_name(iupac.decomposition)
-    assert iupac2str(name) == expected
+def test_decomposed_multichain(smiles, expected):
+    assert get_name(smiles) == expected
 
 
 @pytest.mark.parametrize(
@@ -92,15 +90,8 @@ def test_decomposed_multichain(parser, smiles, expected):
         ("CCCCCC(C(C)C(C)CC)C(CC)CCCC", "6-(3-methylpent-2-yl)-5-ethylundecane"),
     ],
 )
-def test_various_molecules(parser, smiles, expected):
-    (mol,) = parser.parse(smiles)
-    iupac = Iupac(mol)
-
-    mol.print_table()
-    iupac.decomposition.print()
-
-    name = iupac.decompose_name(iupac.decomposition)
-    assert iupac2str(name) == expected
+def test_various_molecules(smiles, expected):
+    assert get_name(smiles) == expected
 
 
 @pytest.mark.parametrize(
@@ -112,15 +103,8 @@ def test_various_molecules(parser, smiles, expected):
         ("CC1C(C)CC(C)CC1", "1,2,4-trimethylcyclohexane"),
     ],
 )
-def test_cycle_names(parser, smiles, expected):
-    (mol,) = parser.parse(smiles)
-    iupac = Iupac(mol)
-
-    mol.print_table()
-    iupac.decomposition.print()
-
-    name = iupac.decompose_name(iupac.decomposition)
-    assert iupac2str(name) == expected
+def test_cycle_names(smiles, expected):
+    assert get_name(smiles) == expected
 
 
 @pytest.mark.parametrize(
@@ -132,6 +116,7 @@ def test_cycle_names(parser, smiles, expected):
         ("CC(O)C(O)C", "butan-2,3-diol"),
         ("CCC(=O)O", "propanoic acid"),
         ("CCC(O)=O", "propanoic acid"),
+        ("C(O)(=O)CC(O)=O", "propan-1,3-dioic acid"),
         ("CCCN", "propanamine"),
         ("CC(C)CCCO", "4-methylpentanol"),
         ("C1CCC(O)CC1", "cyclohexanol"),
@@ -139,17 +124,45 @@ def test_cycle_names(parser, smiles, expected):
         ("C1CCCCC1CC2CCCC2", "1-(1-cyclopentylmethyl)cyclohexane"),
         ("CCCC(C(=O)O)CCC(=O)O", "4-(methylcarboxylic acid)heptanoic acid"),
         ("CCCC(CO)CCC(=O)O", "4-methylolheptanoic acid"),
+        ("C=N", "methanimine"),
+        ("C#N", "methannitrile"),
+        ("C(=O)N", "methanamide"),
     ],
 )
-def test_functional_group_naming(parser, smiles, expected):
-    (mol,) = parser.parse(smiles)
-    iupac = Iupac(mol)
+def test_functional_group_naming(smiles, expected):
+    assert get_name(smiles) == expected
 
-    mol.print_table()
-    iupac.decomposition.print()
-    for f in iupac.alg.functional_groups.items():
-        print(f)
 
-    name = iupac2str(iupac.decompose_name(iupac.decomposition))
-    print(name)
-    assert name == expected
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("c1ccccc1", "phenyl"),
+    ],
+)
+def test_phenyl(smiles, expected):
+    assert get_name(smiles) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("CO", "methanol"),
+        ("C(=O)O", "methanoic acid"),
+        ("OCCO", "ethan-1,2-diol"),
+        ("C1CC1C(CO)C", "2-cyclopropylpropanol"),
+        ("C1CC1CCCC1CC1", "1-(3-cyclopropylpropyl)cyclopropane"),
+    ],
+)
+def test_more_namings(smiles, expected):
+    assert get_name(smiles) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("CCCOCCC", ""),
+        ("CCCNCCC", ""),
+    ],
+)
+def test_splitted_by_func_group_molecules(smiles, expected):
+    assert get_name(smiles) == expected
