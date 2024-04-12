@@ -24,6 +24,10 @@ from buftinom.translate import WordForm, WordFormName
 from buftinom.utils import first_max, nonzero_indexes
 
 
+def is_carbon(a: Atom):
+    return a.symbol.lower() == "c"
+
+
 class Synt(NamedTuple):
     """SYNtax uniT"""
 
@@ -267,19 +271,33 @@ class Iupac:
         if decomp.is_cycle:
             chain: Chain = decomp.chain + (decomp.chain[0],)
 
+        non_carbons = 0
         for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
+            if not is_carbon(a1):
+                non_carbons += 1
+                continue
+
             bond = self.mol.bonds[(a1, a2)]
 
             parent = None
             if a1 in parent_connections:
                 parent = decomp.connected_by
 
+            func_group = decomp.functional_groups.get(a1)
+            if not is_carbon(a2):
+                nc_group = decomp.functional_groups.get(a2)
+                if func_group is not None and nc_group is not None:
+                    raise NotImplementedError(f"Multiple func groups on one atom {a1}")
+
+                func_group = nc_group
+
+            index = i - non_carbons
             yield AtomFeatures(
-                chain_index=i,
+                chain_index=index,
                 atom=a1,
                 bond_ahead=bond,
                 subiupacs=subiupacs.get(a1),
-                functional_group=decomp.functional_groups.get(a1),
+                functional_group=func_group,
                 connected_parent=parent,
             )
 
@@ -579,7 +597,7 @@ class Iupac:
         decomp, features = self.fpod(decomp, unordered_preffixes)
 
         preffixes = self.index_preffixes(features, unordered_preffixes)
-        root = ROOT_BY_LENGTH[len(decomp.chain)].value
+        root = ROOT_BY_LENGTH[len(features)].value
         suffix = self.suffixes_by_features(features, primary=primary)
         func_suffixes = self.functional_suffixes(features)
         infix = Infix.CYCLO.value if decomp.is_cycle else None

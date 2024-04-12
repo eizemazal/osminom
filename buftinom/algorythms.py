@@ -142,12 +142,14 @@ class Alogrythms:
         matchers = get_matchers(self.mol)
 
         result: dict[Atom, GroupMatch] = {}
+        group_atoms = set()
 
         for matcher in matchers:
             for atom in self.mol.atoms:
                 mtch = matcher.matches(atom)
-                if mtch and mtch.root not in result:
+                if mtch and mtch.root not in result and not mtch.atoms & group_atoms:
                     result[mtch.root] = mtch
+                    group_atoms |= mtch.atoms
 
         return result
 
@@ -573,7 +575,7 @@ class Alogrythms:
                 if i == j:
                     continue
                 if set(c1) & set(c2):
-                    raise AssertionError(
+                    raise NotImplementedError(
                         f"Intersecting cycles are not implemented \n{c1} \n{c2}"
                     )
 

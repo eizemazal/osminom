@@ -160,8 +160,8 @@ def test_more_namings(smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
-        ("CCCOCCC", ""),
-        ("CCCNCCC", ""),
+        ("CCCOCCC", "hexan-3-one"),
+        ("CCCNCCC", "hexan-3-amine"),
     ],
 )
 def test_splitted_by_func_group_molecules(smiles, expected):

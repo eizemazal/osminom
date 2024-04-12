@@ -18,8 +18,18 @@ def structcmp(a1: Atom, a2: AtomParams):
     return a1.symbol == a2["symbol"]
 
 
-def find(mol: Molecule, start: Atom, via: AtomParams) -> Atom | None:
+def find(
+    mol: Molecule,
+    start: Atom,
+    via: AtomParams,
+    ignore: set[Atom],
+) -> Atom | None:
+    """
+    Looks find neighbour of the `start` atom the matches `via` param
+    """
     for a in mol.adj[start]:
+        if a in ignore:
+            continue
         if structcmp(a, via):
             if "by" not in via:
                 return a
@@ -60,22 +70,24 @@ class Matcher:
         self.next.extend(matchers)
         return self
 
-    def matches(self, start: Atom) -> GroupMatch | None:
+    def matches(self, start: Atom, *, _visited: set[Atom] = None) -> GroupMatch | None:
         """
         The mach function
 
         Probe if we can find matcher-defined structure starting from param atom
         """
+        _visited = (_visited or set()) | {start}
+
         if not structcmp(start, self.atom):
             return None
 
         matches: list[GroupMatch] = []
         for nxt in self.next:
-            next_atom = find(self.mol, start, nxt.atom)
+            next_atom = find(self.mol, start, nxt.atom, _visited)
             if next_atom is None:
                 return None
 
-            submatch = nxt.matches(next_atom)
+            submatch = nxt.matches(next_atom, _visited=_visited)
             if submatch is None:
                 return None
 
@@ -161,6 +173,17 @@ def amine_matcher(mol: Molecule):
     )
 
 
+def chained_amine_matcher(mol: Molecule):
+    """- N -"""
+    match = MatcherBuilder(mol, FunctionalGroup.AMINE)
+
+    return match.chain(
+        match.atom(symbol="C"),
+        match.atom(by="-", symbol="N", is_root=True),
+        match.atom(by="-", symbol="C"),
+    )
+
+
 def imine_matcher(mol: Molecule):
     """C = N"""
     match = MatcherBuilder(mol, FunctionalGroup.IMINE)
@@ -194,7 +217,7 @@ def acid_amide_matcher(mol: Molecule):
 
 def ketone_matcher(mol: Molecule):
     """- O -"""
-    match = MatcherBuilder(mol, FunctionalGroup.AMIDE)
+    match = MatcherBuilder(mol, FunctionalGroup.KETONE)
 
     return match.chain(
         match.atom(symbol="C"),
@@ -213,8 +236,9 @@ def get_matchers(molecule: Molecule):
     return [
         acid_amide_matcher(molecule),
         acid_matcher(molecule),
-        # ketone_matcher(molecule),
+        ketone_matcher(molecule),
         alco_matcher(molecule),
+        chained_amine_matcher(molecule),
         amine_matcher(molecule),
         imine_matcher(molecule),
         nitrile_matcher(molecule),
