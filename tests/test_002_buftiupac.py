@@ -136,10 +136,13 @@ def test_functional_group_naming(smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
-        ("c1ccccc1", "phenyl"),
+        ("c1ccccc1", "benzene"),
+        ("C1:C:C:C:C:C:1", "benzene"),
+        ("C1=CC=CC=C1", "benzene"),
+        ("C1CCCCC1c1ccccc1", "1-cyclohexylbenzene"),
     ],
 )
-def test_phenyl(smiles, expected):
+def test_aromatic(smiles, expected):
     assert get_name(smiles) == expected
 
 

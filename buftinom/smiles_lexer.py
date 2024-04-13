@@ -69,7 +69,7 @@ class SmilesLexer:
         return t
 
     def t_ELEM(self, t):
-        r"(Br|Cl|B|C|N|O|P|S|F|I|c|n)"
+        r"(Br|Cl|B|C|N|O|P|S|F|I|c|n|o|p|s)"
         return t
 
     def t_atom_ELEM(self, t):
@@ -77,7 +77,7 @@ class SmilesLexer:
             |Zn|Ga|Ge|As|Se|Br|Kr|Rb|Sr|Zr|Nb|Mo|Tc|Ru|Rh|Pd|Ag|Cd|In|Sn \
             |Sb|Te|Xe|Cs|Ba|La|Ce|Pr|Nd|Pm|Sm|Eu|Gd|Tb|Dy|Ho|Er|Tm|Yb|Lu \
             |Hf|Ta|W|Re|Os|Ir|Pt|Au|Hg|Tl|Pb|Bi|Po|At|Rn|Fr|Ra|Ac|Th|Pa  \
-            |Np|Pu|Am|Cm|Bk|Cf|Es|Fm|Md|No|Lr|U|P|S|K|Y|I|B|C|N|O|F|c|n)"
+            |Np|Pu|Am|Cm|Bk|Cf|Es|Fm|Md|No|Lr|U|P|S|K|Y|I|B|C|N|O|F|c|n|o|p|s)"
         return t
 
     def t_ANY_error(self, t):

@@ -8,11 +8,11 @@ from buftinom.funcgroups import GroupMatch, get_matchers
 from buftinom.lookup import (
     BOND_PRIORITY,
 )
-from buftinom.smileg import Atom, Molecule
+from buftinom.smileg import Atom, BondType, Molecule
 from buftinom.utils import filter_max
 
 ChainKey: TypeAlias = tuple[Atom, Atom]
-Chain: TypeAlias = list[Atom] | tuple[Atom, ...]
+Chain: TypeAlias = tuple[Atom, ...]
 
 
 def chainkey(chain: Chain) -> ChainKey:
@@ -25,7 +25,7 @@ def reversekey(key: ChainKey) -> ChainKey:
 
 
 def reversechain(chain: Chain) -> Chain:
-    return list(reversed(chain))
+    return tuple(reversed(chain))
 
 
 @dataclass
@@ -36,9 +36,18 @@ class MolDecomposition:
     # if it is subchain we indicate to which atom it is connected
     connected_by: Atom | None
     is_cycle: bool
+    is_aromatic: bool
+
+    def extra_tags(self):
+        tags = []
+        if self.is_cycle:
+            tags.append("cycle")
+        if self.is_aromatic:
+            tags.append("aromatic")
+        return ",".join(tags)
 
     def print(self, level=0):
-        print(self.chain)
+        print(self.chain, self.extra_tags())
         for connection, decomps in self.connections.items():
             for decomp in decomps:
                 print("    " * level, connection, ":", end=" ")
@@ -65,14 +74,9 @@ class MolDecomposition:
             connections=self.connections,
             functional_groups=self.functional_groups,
             is_cycle=self.is_cycle,
+            is_aromatic=self.is_aromatic,
             connected_by=self.connected_by,
         )
-
-
-@dataclass
-class ChainGroup:
-    matcher: set[Atom]
-    chains: list[Chain]
 
 
 class Alogrythms:
@@ -210,7 +214,7 @@ class Alogrythms:
             visited.add(atom)
             visited |= cycle_atoms
 
-            for c in cycle + [atom]:
+            for c in cycle + (atom,):
                 if c in saturated:
                     continue
 
@@ -294,7 +298,7 @@ class Alogrythms:
         left = left[strip_tail_index:]
         right = right[strip_tail_index:]
 
-        path = left + reversechain(right) + [last_common_node]
+        path = left + reversechain(right) + (last_common_node,)
         return path
 
     @lru_cache(maxsize=256)
@@ -330,7 +334,7 @@ class Alogrythms:
             node = predc[node]
 
         path.reverse()
-        return path if path[0] == start else []
+        return tuple(path) if path[0] == start else []
 
     @cached_property
     def leaf_distances(self):
@@ -359,7 +363,7 @@ class Alogrythms:
         self.leaf_distances
         if len(self.mol.atoms) == 1:
             a = self.mol.atoms[0]
-            return [[a]]
+            return [(a,)]
 
         return self.chains
 
@@ -383,11 +387,66 @@ class Alogrythms:
                 i = 1
         return i
 
+    def is_aromatic(self, cycle: Chain):
+        """
+        given the cycle chain (n > 2, c[0] == c[-1]) returns wether this cycle is aromatic
+        """
+
+        # Case 1: Hueckel's 4N+2 criterion by lowercase notation.
+        # Raises error due if it is not true - it is a syntax error
+        num_aroma = sum([a.symbol.islower() for a in cycle])
+        if num_aroma > 0:
+            if num_aroma > 2 and (num_aroma - 2) % 4 == 0:
+                return True
+
+            raise ValueError(
+                "Invalid aromatic bonds specification "
+                + "(4N+2 atoms should be in aromatic cycle)"
+                + f"\nGot: {cycle}"
+            )
+
+        # Filter Hueckel's 4N+2 criteria. Test if cycle could possibly be aromatic
+        n = len(cycle)
+        if (n - 2) % 4 != 0:
+            return False
+
+        closure = cycle + (cycle[0],)
+
+        # Case 2: all the atoms connected explicitly via `:`
+        all_aromatic = True
+        for a1, a2 in zip(closure, closure[1:]):
+            if self.mol.bonds[(a1, a2)].type != BondType.AROMATIC:
+                all_aromatic = False
+                break
+
+        if all_aromatic:
+            return True
+
+        # Case 3: Traditional C-C=C-C=C-... aromatic cycle definition
+        expected = {BondType.SINGLE, BondType.DOUBLE}
+        next_bond = {
+            BondType.SINGLE: {BondType.DOUBLE},
+            BondType.DOUBLE: {BondType.SINGLE},
+        }
+        mix_correct = True
+        for a1, a2 in zip(closure, closure[1:]):
+            bond = self.mol.bonds[a1, a2]
+            if bond.type not in expected:
+                mix_correct = False
+                break
+
+            expected = next_bond.get(bond.type)
+
+        return mix_correct
+
     def chain_cycle(self, chain: Chain):
         if len(chain) < 3:
             return False
         first, last = chainkey(chain)
         return (last, first) in self.mol.bonds
+
+    def chain_cycle_aromatic(self, chain: Chain):
+        return self.chain_cycle(chain) and self.is_aromatic(chain)
 
     def chain_length(self, chain: Chain):
         return len(chain)
@@ -420,6 +479,7 @@ class Alogrythms:
         max_chains = filter_max(max_chains, self.chain_count_functional_group)
         max_chains = filter_max(max_chains, self.chain_cycle)
         max_chains = filter_max(max_chains, self.chain_length)
+        max_chains = filter_max(max_chains, self.chain_cycle_aromatic)
         max_chains = filter_max(max_chains, self.chain_bonds)
         max_chains = filter_max(max_chains, self.chain_outside_connections)
         #
@@ -479,7 +539,7 @@ class Alogrythms:
 
             key = chainkey(buffer)
             if key not in existing:
-                splits.append(buffer)
+                splits.append(tuple(buffer))
                 existing.add(key)
                 existing.add(reversekey(key))
 
@@ -617,11 +677,14 @@ class Alogrythms:
                 connections[connection].append(_decompose(groupped_chains, connection))
 
             func_groups = self.chain_functional_groups(max_chain)
+            is_cycle = self.chain_cycle(max_chain)
+            is_aromatic = is_cycle and self.is_aromatic(max_chain)
 
             return MolDecomposition(
                 chain=tuple(max_chain),
                 connections=connections,
-                is_cycle=self.chain_cycle(max_chain),
+                is_cycle=is_cycle,
+                is_aromatic=is_aromatic,
                 connected_by=parent_connection,
                 functional_groups=func_groups,
             )
