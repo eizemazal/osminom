@@ -15,6 +15,7 @@ from buftinom.lookup import (
     MULTI_MULTI_BY_PREFIX,
     ROOT_BY_LENGTH,
     Alphabet,
+    Aromatic,
     Infix,
     Prefix,
     PrimarySuffix,
@@ -70,6 +71,7 @@ class IupacName:
     prime_suffixes: list[Synt]
     sub_suffix: Synt = None
     func_suffixes: list[Synt]
+    ref: MolDecomposition
 
     def __repr__(self):
         return "".join(
@@ -144,7 +146,7 @@ def all_suffixes2str(iupac: IupacName):
     if functionals:
         res.extend(functionals)
 
-    if not iupac.sub_suffix and not functionals:
+    if lastprime and not iupac.sub_suffix and not functionals:
         res[-1] = lastprime.norm
 
     return "".join(res)
@@ -201,6 +203,16 @@ def preffixes2str(iupac: IupacName):
     return "-".join(res)
 
 
+def root2str(iupac: IupacName) -> str:
+    if iupac.sub_suffix:
+        return iupac.root_word.get("sub")
+
+    if iupac.func_suffixes:
+        return iupac.root_word.get("sub")
+
+    return iupac.root_word.get("norm")
+
+
 def iupac2str(iupac: IupacName) -> str:
     """
     The iupac2str method.
@@ -209,7 +221,7 @@ def iupac2str(iupac: IupacName) -> str:
     """
     preffix = preffixes2str(iupac)
     infix = iupac.infix
-    root = iupac.root_word.norm
+    root = root2str(iupac)
     suffix = all_suffixes2str(iupac)
 
     return "".join(map(s, [preffix, infix, root, suffix]))
@@ -318,11 +330,21 @@ class Iupac:
                 connected_parent=parent,
             )
 
-    def suffixes_by_features(self, features: list[AtomFeatures], *, primary: bool):
+    def suffixes_by_features(
+        self,
+        decomp: MolDecomposition,
+        features: list[AtomFeatures],
+        *,
+        primary: bool,
+    ):
         """
         Find which primary suffixes should be used based on the bonds of the chain
         """
         result = []
+
+        # aromatic suffix managed by a root word definition
+        if decomp.is_aromatic:
+            return result
 
         for feature in features:
             if feature.bond_ahead is None:
@@ -587,6 +609,23 @@ class Iupac:
     #
     # End fpod
 
+    def root_word(self, decomp: MolDecomposition, features: list[AtomFeatures]):
+        if not decomp.is_aromatic:
+            return ROOT_BY_LENGTH[len(features)].value
+
+        if len(decomp.chain) == 6:
+            return Aromatic.BENZ.value
+
+        raise NotImplementedError(
+            f"Aromatic ring with lengh {len(decomp.chain)} is not supported"
+        )
+
+    def infix(self, decomp: MolDecomposition, features: list[AtomFeatures]):
+        if decomp.is_aromatic or not decomp.is_cycle:
+            return None
+
+        return Infix.CYCLO.value
+
     def decompose_name(self, decomp: MolDecomposition, *, primary: bool = True):
         """
         Recursively convert given decomposition to the IupacName.
@@ -597,10 +636,10 @@ class Iupac:
         decomp, features = self.fpod(decomp, unordered_preffixes)
 
         preffixes = self.index_preffixes(features, unordered_preffixes)
-        root = ROOT_BY_LENGTH[len(features)].value
-        suffix = self.suffixes_by_features(features, primary=primary)
+        root = self.root_word(decomp, features)
+        suffix = self.suffixes_by_features(decomp, features, primary=primary)
         func_suffixes = self.functional_suffixes(features)
-        infix = Infix.CYCLO.value if decomp.is_cycle else None
+        infix = self.infix(decomp, features)
         subsuff = self.subsuffix(features, decomp.connected_by, primary)
 
         return IupacName(
@@ -610,6 +649,7 @@ class Iupac:
             prime_suffixes=suffix,
             sub_suffix=subsuff,
             func_suffixes=func_suffixes,
+            ref=decomp,
         )
 
     def construct_name(self):

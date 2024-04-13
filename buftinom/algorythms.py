@@ -534,7 +534,7 @@ class Alogrythms:
                 continue
 
             if self.chain_cycle(buffer):
-                splits.append(buffer)
+                splits.append(tuple(buffer))
                 continue
 
             key = chainkey(buffer)

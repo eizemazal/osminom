@@ -140,6 +140,13 @@ def test_functional_group_naming(smiles, expected):
         ("C1:C:C:C:C:C:1", "benzene"),
         ("C1=CC=CC=C1", "benzene"),
         ("C1CCCCC1c1ccccc1", "1-cyclohexylbenzene"),
+        ("C1CCCCCC1c1ccccc1", "1-phenylcycloheptane"),
+        ("C1CCCCCC1C1=CC=CC=C1", "1-phenylcycloheptane"),
+        ("c1ccccc1O", "phenol"),
+        ("C1:C:C:C:C:C:1O", "phenol"),
+        ("C1=CC=CC=C1O", "phenol"),
+        ("C1=CC=C(O)C=C1", "phenol"),
+        ("c1ccccc1CCC", "1-propylbenzene"),
     ],
 )
 def test_aromatic(smiles, expected):

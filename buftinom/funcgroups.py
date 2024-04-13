@@ -15,7 +15,7 @@ class AtomParams(TypedDict):
 
 
 def structcmp(a1: Atom, a2: AtomParams):
-    return a1.symbol == a2["symbol"]
+    return a1.symbol.lower() == a2["symbol"].lower()
 
 
 def find(

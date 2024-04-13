@@ -25,6 +25,12 @@
         "nonadec": "nonadec",
         "icos": "icos"
     },
+    "aromatic": {
+        "benzene": {
+            "norm": "benzene",
+            "sub": "phen"
+        }
+    },
     "psuffix": {
         "ane": {
             "norm": "ane",

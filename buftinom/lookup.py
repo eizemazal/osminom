@@ -60,6 +60,10 @@ class Infix(Enum):
     BICYCLO = _("infix.bicyclo")
 
 
+class Aromatic(Enum):
+    BENZ = _("aromatic.benzene", sub=True)
+
+
 class Prefix(Enum):
     YL = _("prefix.yl")
 

@@ -18,7 +18,7 @@ def filter_max(iterable, key_func: Callable[[Any], float]):
         return []
     weighted = [(i, key_func(i)) for i in iterable]
     max_val = max([w for i, w in weighted])
-    return [i for i, w in list(filter(lambda v: v[1] == max_val, weighted))]
+    return [i for i, _ in list(filter(lambda v: v[1] == max_val, weighted))]
 
 
 def choose(*, a, b, cmp: int):
@@ -74,7 +74,7 @@ def argmax_filter(iterable, include):
 
 def first_max(iterables: list[list[int]]):
     """
-    See Iupac._fopod_many
+    See Iupac._fpod_many
     """
     row_indexes = set(range(len(iterables)))
 
