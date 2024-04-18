@@ -106,10 +106,7 @@ class Alogrythms:
         if len(self.mol.atoms) == 1:
             return [self.mol.atoms[0]]
 
-        cycles = self.cycles
-        cycle_atoms = set()
-        for cycle in cycles:
-            cycle_atoms |= set(cycle)
+        cycle_atoms = self.cycle_atoms
 
         leafs = []
         for atom, connections in self.mol.adj.items():
@@ -225,6 +222,14 @@ class Alogrythms:
 
         return cycles
 
+    @cached_property
+    def cycle_atoms(self):
+        cycle_atoms: set[Atom] = set()
+        for cycle in self.cycles:
+            cycle_atoms |= set(cycle)
+
+        return cycle_atoms
+
     def shortest_cycle(
         self,
         graph: dict[Atom, list[Atom]],
@@ -326,21 +331,26 @@ class Alogrythms:
 
         return distances, predecessors
 
-    def unfold_chain(self, predc: dict[Atom, Atom], start: Atom, end: Atom) -> Chain:
+    def unfold_chain(
+        self, predc: dict[Atom, Atom], start: Atom, end: Atom, ignore: set[Atom]
+    ) -> Chain:
         path = []
         node = end
         while node is not None:
+            if node in ignore:
+                break
             path.append(node)
             node = predc[node]
 
         path.reverse()
-        return tuple(path) if path[0] == start else []
+        return tuple(path)
 
     @cached_property
     def leaf_distances(self):
         """Calculate distances between all leaf atoms, using self.distances_from"""
         leafs = self.leafs
         leaf_distances: dict[ChainKey, float] = {}
+        cycle_atoms = self.cycle_atoms
 
         if len(leafs) == 1:
             leaf = [leafs[0]]
@@ -353,8 +363,10 @@ class Alogrythms:
             for a2 in leafs:
                 if a1 == a2:
                     continue
-                self.chains.append(self.unfold_chain(a1_predecessors, a1, a2))
-                leaf_distances[(a1, a2)] = a1_distances[a2]
+                chain = self.unfold_chain(a1_predecessors, a1, a2, ignore=cycle_atoms)
+                if chain:
+                    self.chains.append(chain)
+                    leaf_distances[(a1, a2)] = a1_distances[a2]
 
         return leaf_distances
 

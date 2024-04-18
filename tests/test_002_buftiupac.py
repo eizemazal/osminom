@@ -156,11 +156,20 @@ def test_aromatic(smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
+        #
         ("CO", "methanol"),
         ("C(=O)O", "methanoic acid"),
         ("OCCO", "ethan-1,2-diol"),
         ("C1CC1C(CO)C", "2-cyclopropylpropanol"),
         ("C1CC1CCCC1CC1", "1-(3-cyclopropylpropyl)cyclopropane"),
+        #
+        ("c1cc(CCO)ccc1CC", "2-(4-ethylphenyl)ethanol"),
+        ("CCCOC", "butan-1-one"),
+        ("CC(=O)CC", ""),
+        ("OCCC1C(CO)C1", ""),
+        ("C1C(CCO)C1O", ""),
+        ("C1CC1=C", ""),
+        ("CC(=O)NC", ""),
     ],
 )
 def test_more_namings(smiles, expected):
