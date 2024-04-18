@@ -12,6 +12,7 @@ class AtomParams(TypedDict):
     by: NotRequired[BondSymbol]
     symbol: str
     is_root: NotRequired[bool]
+    is_side_root: NotRequired[bool]
 
 
 def structcmp(a1: Atom, a2: AtomParams):
@@ -37,11 +38,17 @@ def find(
                 return a
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, unsafe_hash=True, eq=True)
 class GroupMatch:
     root: Atom | None
+    side_root: Atom | None
     atoms: set[Atom]
     tag: FunctionalGroup
+
+    def __str__(self):
+        return f"group({self.atoms}, {self.tag.name})"
+
+    __repr__ = __str__
 
 
 class Matcher:
@@ -94,23 +101,32 @@ class Matcher:
             matches.append(submatch)
 
         root = None
+        side_root = None
         atoms: set[Atom] = {start}
         if self.atom.get("is_root"):
             root = start
 
+        if self.atom.get("is_side_root"):
+            side_root = start
+
         for mtch in matches:
             atoms = atoms | mtch.atoms
-            if mtch.root is None:
-                continue
+            if mtch.root is not None:
+                if root is not None:
+                    raise ValueError(
+                        f"Multiple match root found ({root}, {mtch.root}). Use only one atom as root"
+                    )
 
-            if root is not None:
-                raise ValueError(
-                    f"Multiple match root found ({root}, {mtch.root}). Use only one atom as root"
-                )
+                root = mtch.root
 
-            root = mtch.root
+            if mtch.side_root is not None:
+                if side_root is not None:
+                    raise ValueError(
+                        f"Multiple sideroots ({side_root}, {mtch.side_root}) Use only one atom as side_root"
+                    )
+                side_root = mtch.side_root
 
-        return GroupMatch(root, atoms, self.tag)
+        return GroupMatch(root=root, side_root=side_root, atoms=atoms, tag=self.tag)
 
 
 class MatcherBuilder:
@@ -153,7 +169,7 @@ def alco_matcher(mol: Molecule):
 
 
 def acid_matcher(mol: Molecule):
-    """Linear match O=C-O"""
+    """Linear match O=C-O aka R-COOH"""
     match = MatcherBuilder(mol, FunctionalGroup.CARBOXYLIC_ACID)
 
     return match.chain(
@@ -215,14 +231,36 @@ def acid_amide_matcher(mol: Molecule):
     )
 
 
-def ketone_matcher(mol: Molecule):
+def oxy_matcher(mol: Molecule):
     """- O -"""
-    match = MatcherBuilder(mol, FunctionalGroup.KETONE)
+    match = MatcherBuilder(mol, FunctionalGroup.OXY)
 
     return match.chain(
         match.atom(symbol="C"),
         match.atom(by="-", symbol="O", is_root=True),
-        match.atom(by="-", symbol="C"),
+        match.atom(by="-", symbol="C", is_side_root=True),
+    )
+
+
+def ketone_matcher(mol: Molecule):
+    """O = C"""
+    match = MatcherBuilder(mol, FunctionalGroup.KETONE)
+
+    return match.chain(
+        match.atom(symbol="O"),
+        match.atom(by="=", symbol="C", is_root=True),
+    )
+
+
+def ester_matcher(mol: Molecule):
+    """O=C-O-C aka RCOOR"""
+    match = MatcherBuilder(mol, FunctionalGroup.ESTER)
+
+    return match.chain(
+        match.atom(symbol="O"),
+        match.atom(by="=", symbol="C", is_root=True),
+        match.atom(by="-", symbol="O"),
+        match.atom(by="-", symbol="C", is_side_root=True),
     )
 
 
@@ -233,16 +271,20 @@ def get_matchers(molecule: Molecule):
     we guarantee that COOH is matching before CO, and selected first (if matched)
     which would cause collision otherwise (because CO always matches if COOH matches)
     """
-    return [
-        acid_amide_matcher(molecule),
-        acid_matcher(molecule),
-        ketone_matcher(molecule),
-        alco_matcher(molecule),
-        chained_amine_matcher(molecule),
-        amine_matcher(molecule),
-        imine_matcher(molecule),
-        nitrile_matcher(molecule),
+    matchers = [
+        ester_matcher,
+        acid_amide_matcher,
+        acid_matcher,
+        oxy_matcher,
+        alco_matcher,
+        chained_amine_matcher,
+        ketone_matcher,
+        amine_matcher,
+        imine_matcher,
+        nitrile_matcher,
     ]
+
+    return [m(molecule) for m in matchers]
 
 
 # Extra

@@ -48,10 +48,12 @@ class FunctionalGroup(Enum):
     NITRILE = _("functional-group.nitrile", sub=True)
     ALDEHYDE = _("functional-group.al")
     KETONE = _("functional-group.one")
+    OXY = _("functional-group.oxy")
     ALCOHOL = _("functional-group.ol")
     THIOL = _("functional-group.thiol")
     AMINE = _("functional-group.amine")
     IMINE = _("functional-group.imine")
+    ESTER = _("functional-group.ester", sub=True)
 
 
 class Infix(Enum):

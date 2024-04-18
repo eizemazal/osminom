@@ -70,8 +70,13 @@
             "norm": "nitrile",
             "sub": "carbonitrile"
         },
+        "ester": {
+            "norm": "oate",
+            "sub": "carboxylate"
+        },
         "al": "al",
         "one": "one",
+        "oxy": "oxy",
         "ol": "ol",
         "thiol": "thiol",
         "amine": "amine",

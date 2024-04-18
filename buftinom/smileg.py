@@ -12,6 +12,10 @@ def debug_atoms(debug: bool):
     DEBUG_ATOMS = True
 
 
+def is_carbon(a: "Atom"):
+    return a is not None and a.symbol.lower() == "c"
+
+
 @dataclass(slots=True, frozen=True)
 class Atom:
     id: int

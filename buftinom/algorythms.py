@@ -8,7 +8,7 @@ from buftinom.funcgroups import GroupMatch, get_matchers
 from buftinom.lookup import (
     BOND_PRIORITY,
 )
-from buftinom.smileg import Atom, BondType, Molecule
+from buftinom.smileg import Atom, BondType, Molecule, is_carbon
 from buftinom.utils import filter_max
 
 ChainKey: TypeAlias = tuple[Atom, Atom]
@@ -28,13 +28,33 @@ def reversechain(chain: Chain) -> Chain:
     return tuple(reversed(chain))
 
 
+@dataclass(eq=True, frozen=True)
+class SubchainConnection:
+    parent: Atom
+    peer: Atom
+    bond: BondType
+    via: GroupMatch | None
+
+    def __hash__(self):
+        return hash((self.parent, self.peer, self.bond))
+
+    def __str__(self):
+        via = self.via
+        if not via:
+            via = self.bond
+        return f"<{self.parent} {via} {self.peer}>"
+
+    __repr__ = __str__
+
+
 @dataclass
 class MolDecomposition:
     chain: Chain
-    connections: dict[Atom, list["MolDecomposition"]]
+    connections: dict[SubchainConnection, list["MolDecomposition"]]
     functional_groups: dict[Atom, list[GroupMatch]]
     # if it is subchain we indicate to which atom it is connected
-    connected_by: Atom | None
+    # Here, the peer will be the atom from this chain
+    connected_by: SubchainConnection | None
     is_cycle: bool
     is_aromatic: bool
 
@@ -156,12 +176,16 @@ class Alogrythms:
 
     @cached_property
     def functional_group_atoms(self):
-        """Lil helper, returns atoms of the functional groups, excluding root atoms"""
+        """
+        Lil helper, returns atoms of the functional groups, excluding carbon atoms
+
+        This atoms used to ignore them during pathfinding
+        """
         atoms: set[Atom] = set()
         for func_group in self.functional_groups.values():
-            group_atoms = func_group.atoms
-            if func_group.root:
-                group_atoms = group_atoms.difference({func_group.root})
+            group_atoms = func_group.atoms - set(
+                a for a in func_group.atoms if is_carbon(a)
+            )
 
             atoms |= group_atoms
         return atoms
@@ -280,10 +304,10 @@ class Alogrythms:
         left = [end]
         right = [start]
 
-        while predc[left[-1]] != None:
+        while predc[left[-1]] is not None:
             left.append(predc[left[-1]])
 
-        while predc[right[-1]] != None:
+        while predc[right[-1]] is not None:
             right.append(predc[right[-1]])
 
         left = reversechain(left)
@@ -292,9 +316,9 @@ class Alogrythms:
         assert right[0] == last_common_node
 
         strip_tail_index = 0
-        for idx, (l, r) in enumerate(zip(left, right)):
-            if l == r:
-                last_common_node = l
+        for idx, (latom, ratom) in enumerate(zip(left, right)):
+            if latom == ratom:
+                last_common_node = latom
                 continue
 
             strip_tail_index = idx
@@ -350,7 +374,7 @@ class Alogrythms:
         """Calculate distances between all leaf atoms, using self.distances_from"""
         leafs = self.leafs
         leaf_distances: dict[ChainKey, float] = {}
-        cycle_atoms = self.cycle_atoms
+        path_stops = self.cycle_atoms | self.functional_group_atoms
 
         if len(leafs) == 1:
             leaf = [leafs[0]]
@@ -363,7 +387,7 @@ class Alogrythms:
             for a2 in leafs:
                 if a1 == a2:
                     continue
-                chain = self.unfold_chain(a1_predecessors, a1, a2, ignore=cycle_atoms)
+                chain = self.unfold_chain(a1_predecessors, a1, a2, ignore=path_stops)
                 if chain:
                     self.chains.append(chain)
                     leaf_distances[(a1, a2)] = a1_distances[a2]
@@ -381,13 +405,15 @@ class Alogrythms:
 
     ## Begin score functions to calculate the priorities for selecting primary chain
 
-    def chain_have_connection(self, atom_conntecor: Atom | None, chain: Chain):
-        if atom_conntecor is None:
+    def chain_have_connection(
+        self, connection: SubchainConnection | None, chain: Chain
+    ):
+        if connection is None:
             return 0
 
-        atom_conns = self.mol.adj_set[atom_conntecor]
+        atom_conn = connection.peer
         for atom in chain:
-            if atom in atom_conns:
+            if atom == atom_conn:
                 return 1
         return 0
 
@@ -564,24 +590,59 @@ class Alogrythms:
         adj = self.mol.adj_set
         chain_atoms = set(base_chain)
 
-        connections: set[Atom] = set()
+        # base_chain to group atom
+        connections: set[(Atom, Atom)] = set()
 
         for chain in group:
             for atom in chain:
-                conns = adj[atom] & chain_atoms
-                if conns:
-                    connections |= conns
+                for e in adj[atom] & chain_atoms:
+                    connections.add((e, atom))
                     break
 
         # It is not supported yet bicyclo case
+        assert len(connections) <= 1, connections
+
+        if len(connections) == 1:
+            base_atom, group_atom = connections.pop()
+
+            return SubchainConnection(
+                parent=base_atom,
+                peer=group_atom,
+                bond=self.mol.bonds[(base_atom, group_atom)],
+                via=None,
+            )
+
+        # Check connection through the functional group (i.e. ester R-COO-R)
+
+        # group match connections
+        connections: list[GroupMatch] = []
+
+        for atom, func_group in self.chain_functional_groups(base_chain).items():
+            if func_group.side_root is None:
+                continue
+
+            for chain in group:
+                for a in chain:
+                    if func_group.side_root == a:
+                        connections.append(func_group)
+
+        # some nonsence
         assert len(connections) == 1, connections
-        return connections.pop()
+
+        match = connections.pop()
+
+        return SubchainConnection(
+            parent=match.root,
+            peer=match.side_root,
+            bond=BondType.SINGLE,
+            via=match,
+        )
 
     def group_connections(self, groups: list[list[Chain]], chain: Chain):
         """
         for each group return atom by which this group connected to the chain
         """
-        res: list[tuple[Atom, list[Chain]]] = []
+        res: list[tuple[SubchainConnection, list[Chain]]] = []
         for group in groups:
             connector = self.connection_point(group, chain)
             res.append((connector, group))
@@ -676,7 +737,7 @@ class Alogrythms:
         cycles = self.cycles
         self.assert_not_implemented(cycles)
 
-        def _decompose(chains: list[Chain], parent_connection: Atom):
+        def _decompose(chains: list[Chain], parent_connection: SubchainConnection):
             connections: dict[Atom, list[Chain]] = defaultdict(list)
 
             max_chain = self.max_chain(chains, parent_connection)

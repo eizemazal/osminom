@@ -7,6 +7,7 @@ from buftinom.algorythms import (
     Alogrythms,
     Chain,
     MolDecomposition,
+    SubchainConnection,
     reversechain,
 )
 from buftinom.funcgroups import GroupMatch
@@ -20,13 +21,9 @@ from buftinom.lookup import (
     Prefix,
     PrimarySuffix,
 )
-from buftinom.smileg import Atom, Bond, BondType, Molecule
+from buftinom.smileg import Atom, Bond, BondType, Molecule, is_carbon
 from buftinom.translate import WordForm, WordFormName
 from buftinom.utils import first_max, nonzero_indexes
-
-
-def is_carbon(a: Atom):
-    return a.symbol.lower() == "c"
 
 
 class Synt(NamedTuple):
@@ -232,7 +229,8 @@ class AtomFeatures:
     chain_index: int
     atom: Atom
     bond_ahead: Bond
-    connected_parent: Atom
+    # self atom in this connection is peer
+    connection: SubchainConnection
     subiupacs: list[IupacName]
     functional_group: GroupMatch | None
 
@@ -278,7 +276,7 @@ class Iupac:
         Spectial attention to cycles, their representation contains bonds between the edges of the chain
         """
         chain = decomp.chain
-        parent_connections = self.mol.adj_set.get(decomp.connected_by, set())
+        parent_connection = decomp.connected_by
 
         if decomp.is_cycle:
             chain: Chain = decomp.chain + (decomp.chain[0],)
@@ -292,7 +290,7 @@ class Iupac:
             bond = self.mol.bonds[(a1, a2)]
 
             parent = None
-            if a1 in parent_connections:
+            if parent_connection and a1 == parent_connection.peer:
                 parent = decomp.connected_by
 
             func_group = decomp.functional_groups.get(a1)
@@ -310,25 +308,27 @@ class Iupac:
                 bond_ahead=bond,
                 subiupacs=subiupacs.get(a1),
                 functional_group=func_group,
-                connected_parent=parent,
+                connection=parent,
             )
 
         # Do not forget the last atom of the chain
-        if not decomp.is_cycle:
-            last = chain[-1]
+        if decomp.is_cycle:
+            return
 
-            parent = None
-            if last in parent_connections:
-                parent = decomp.connected_by
+        last = chain[-1]
 
-            yield AtomFeatures(
-                chain_index=len(chain),
-                atom=last,
-                bond_ahead=None,
-                subiupacs=subiupacs.get(last),
-                functional_group=decomp.functional_groups.get(last),
-                connected_parent=parent,
-            )
+        parent = None
+        if parent_connection and last == parent_connection.peer:
+            parent = decomp.connected_by
+
+        yield AtomFeatures(
+            chain_index=len(chain),
+            atom=last,
+            bond_ahead=None,
+            subiupacs=subiupacs.get(last),
+            functional_group=decomp.functional_groups.get(last),
+            connection=parent,
+        )
 
     def suffixes_by_features(
         self,
@@ -361,12 +361,17 @@ class Iupac:
 
         return result
 
-    def subsuffix(self, features: list[AtomFeatures], connector: Atom, primary: bool):
+    def subsuffix(
+        self,
+        features: list[AtomFeatures],
+        connector: SubchainConnection,
+        primary: bool,
+    ):
         if primary:
             return None
 
         for feature in features:
-            if feature.connected_parent:
+            if feature.connection:
                 return Synt(feature.chain_index, Prefix.YL.value)
 
         raise AssertionError(
@@ -388,14 +393,13 @@ class Iupac:
         Recursively find preffixes of the Iupac name.
         """
         result: dict[Atom, list[IupacName]] = defaultdict(list)
-        for atom in dec.chain:
-            subchains = dec.connections.get(atom, [])
 
+        for connection, subchains in dec.connections.items():
             for subchain in subchains:
                 #
                 subiupac = self.decompose_name(subchain, primary=False)
                 #
-                result[atom].append(subiupac)
+                result[connection.parent].append(subiupac)
 
         return result
 
@@ -425,7 +429,7 @@ class Iupac:
     }
 
     def feature_connected(self, feature: AtomFeatures):
-        return int(feature.connected_parent is not None)
+        return int(feature.connection is not None)
 
     def feature_bonds(self, feature: AtomFeatures):
         if feature.bond_ahead is None:
