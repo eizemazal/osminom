@@ -68,6 +68,8 @@ class Aromatic(Enum):
 
 class Prefix(Enum):
     YL = _("prefix.yl")
+    YLIDENE = _("prefix.ylidene")
+    YLIDYNE = _("prefix.ylidyne")
 
 
 class MultiplyingPrefix(Enum):
@@ -139,3 +141,17 @@ MULTI_MULTI_BY_PREFIX = {
     4: MultiplyingPrefix.TETRAKIS,
     5: MultiplyingPrefix.PENTAKIS,
 }
+
+
+def is_preferred_prefix(name: FunctionalGroup):
+    if name == FunctionalGroup.OXY:
+        return True
+
+    return False
+
+
+def provides_split(name: FunctionalGroup):
+    if name == FunctionalGroup.OXY:
+        return False
+
+    return True

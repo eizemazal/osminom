@@ -83,7 +83,9 @@
         "imine": "imine"
     },
     "prefix": {
-        "yl": "yl"
+        "yl": "yl",
+        "ylidene": "ylidene",
+        "ylidyne": "ylidyne"
     },
     "multiplying": {
         "di": "di",

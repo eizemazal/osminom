@@ -106,7 +106,7 @@ def test_stipchains_many():
     [
         # They have the same structure, different notation
         "CCCCCCCC(C(C)CC)C(C(C)CC)CCCCCCC",
-        "CCCCCCCO(C(C)CC)C(CCCCCCC)C(C)CC",
+        "CCCCCCCC(C(C)CC)C(CCCCCCC)C(C)CC",
     ],
 )
 def test_decompose(smiles):

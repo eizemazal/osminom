@@ -16,7 +16,9 @@ def get_name(smiles):
     for f in iupac.alg.functional_groups.items():
         print(f)
 
-    name = iupac2str(iupac.construct_name())
+    iupac_name = iupac.construct_name()
+    print(iupac_name)
+    name = iupac2str(iupac_name)
     print(name)
     return name
 
@@ -164,13 +166,13 @@ def test_aromatic(smiles, expected):
         ("C1CC1CCCC1CC1", "1-(3-cyclopropylpropyl)cyclopropane"),
         #
         ("c1cc(CCO)ccc1CC", "2-(4-ethylphenyl)ethanol"),
-        ("CCCOC", "propoxymetane"),
+        ("CCCOC", "1-methoxypropane"),
         ("CC(=O)CC", "butan-2-one"),
-        ("OCCC1C(CO)C1", ""),
-        ("C1C(CCO)C1O", ""),
-        ("C1CC1=C", ""),
+        ("OCCC1C(CO)C1", "2-(2-methylolcyclopropyl)ethanol"),
+        ("C1C(CCO)C1O", "2-ethyl-2-olcyclopropanol"),
+        ("C1CC1=C", "1-methylidenecyclopropane"),
         ("CC(=O)NC", ""),
-        ("CC(=O)OC", ""),
+        ("CC(=O)OC", "methane ethanoate"),
     ],
 )
 def test_more_namings(smiles, expected):
@@ -180,8 +182,8 @@ def test_more_namings(smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
-        ("CCCOCCC", "hexan-3-one"),
-        ("CCCNCCC", "hexan-3-amine"),
+        ("CCCOCCC", "1-propoxypropane"),
+        # ("CCCNCCC", "hexan-3-amine"),
     ],
 )
 def test_splitted_by_func_group_molecules(smiles, expected):

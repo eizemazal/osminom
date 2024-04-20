@@ -20,6 +20,8 @@ from buftinom.lookup import (
     Infix,
     Prefix,
     PrimarySuffix,
+    is_preferred_prefix,
+    provides_split,
 )
 from buftinom.smileg import Atom, Bond, BondType, Molecule, is_carbon
 from buftinom.translate import WordForm, WordFormName
@@ -62,6 +64,7 @@ class IupacName:
     Structured IUPAC name representation
     """
 
+    subnames: list["IupacName"]
     prefixes: list[Subn] = field(default_factory=list)
     infix: WordForm = None
     root_word: WordForm
@@ -71,7 +74,10 @@ class IupacName:
     ref: MolDecomposition
 
     def __repr__(self):
-        return "".join(
+        sn = s(self.subnames)
+        if sn:
+            sn += " "
+        return sn + "".join(
             map(
                 s,
                 [
@@ -221,7 +227,11 @@ def iupac2str(iupac: IupacName) -> str:
     root = root2str(iupac)
     suffix = all_suffixes2str(iupac)
 
-    return "".join(map(s, [preffix, infix, root, suffix]))
+    subnames = ""
+    if iupac.subnames:
+        subnames = " ".join(map(iupac2str, iupac.subnames)) + " "
+
+    return subnames + "".join(map(s, [preffix, infix, root, suffix]))
 
 
 @dataclass
@@ -371,37 +381,56 @@ class Iupac:
             return None
 
         for feature in features:
-            if feature.connection:
+            if not feature.connection:
+                continue
+
+            conn = feature.connection
+
+            if conn.via and is_preferred_prefix(conn.via.tag):
+                return Synt(feature.chain_index, conn.via.tag.value)
+
+            if conn.bond.type == BondType.SINGLE:
                 return Synt(feature.chain_index, Prefix.YL.value)
+
+            if conn.bond.type == BondType.DOUBLE:
+                return Synt(feature.chain_index, Prefix.YLIDENE.value)
+
+            if conn.bond.type == BondType.TRIPLE:
+                return Synt(feature.chain_index, Prefix.YLIDYNE.value)
 
         raise AssertionError(
             f"Connector {connector} is not connected to the chain {features}"
         )
 
-    def functional_suffixes(self, features: list[AtomFeatures]):
+    def functional_suffixes(self, features: list[AtomFeatures], *, primary: bool):
         """
         Collect all functional suffixed of the chain based on the functional groups it have
         """
         result = []
         for f in features:
-            if f.functional_group:
+            if f.functional_group and not is_preferred_prefix(f.functional_group.tag):
                 result.append(Synt(f.chain_index, f.functional_group.tag.value))
         return result
 
-    def preffixes(self, dec: MolDecomposition):
+    def children(self, dec: MolDecomposition):
         """
         Recursively find preffixes of the Iupac name.
         """
-        result: dict[Atom, list[IupacName]] = defaultdict(list)
+        subnames: list[IupacName] = []
+        preffixes: dict[Atom, list[IupacName]] = defaultdict(list)
 
         for connection, subchains in dec.connections.items():
             for subchain in subchains:
                 #
-                subiupac = self.decompose_name(subchain, primary=False)
+                if connection.via is None or not provides_split(connection.via.tag):
+                    subiupac = self.decompose_name(subchain, primary=False)
+                    preffixes[connection.parent].append(subiupac)
+                else:
+                    subiupac = self.decompose_name(subchain, primary=True)
+                    subnames.append(subiupac)
                 #
-                result[connection.parent].append(subiupac)
 
-        return result
+        return subnames, preffixes
 
     def index_preffixes(
         self, features: list[AtomFeatures], all_preffixes: dict[Atom, list[IupacName]]
@@ -635,18 +664,19 @@ class Iupac:
         Recursively convert given decomposition to the IupacName.
         """
         #
-        unordered_preffixes = self.preffixes(decomp)
+        subnames, unordered_preffixes = self.children(decomp)
         #
         decomp, features = self.fpod(decomp, unordered_preffixes)
 
         preffixes = self.index_preffixes(features, unordered_preffixes)
         root = self.root_word(decomp, features)
         suffix = self.suffixes_by_features(decomp, features, primary=primary)
-        func_suffixes = self.functional_suffixes(features)
+        func_suffixes = self.functional_suffixes(features, primary=primary)
         infix = self.infix(decomp, features)
         subsuff = self.subsuffix(features, decomp.connected_by, primary)
 
         return IupacName(
+            subnames=subnames,
             prefixes=preffixes,
             infix=infix,
             root_word=root,

@@ -13,6 +13,7 @@ class AtomParams(TypedDict):
     symbol: str
     is_root: NotRequired[bool]
     is_side_root: NotRequired[bool]
+    is_terminal: NotRequired[bool]
 
 
 def structcmp(a1: Atom, a2: AtomParams):
@@ -31,14 +32,19 @@ def find(
     for a in mol.adj[start]:
         if a in ignore:
             continue
-        if structcmp(a, via):
-            if "by" not in via:
-                return a
-            elif mol.bonds[(start, a)] == Bond.make(via["by"]):
-                return a
+        if not structcmp(a, via):
+            continue
+
+        if via.get("is_terminal") and len(mol.adj[a]) > 1:
+            continue
+
+        if "by" not in via:
+            return a
+        elif mol.bonds[(start, a)] == Bond.make(via["by"]):
+            return a
 
 
-@dataclass(frozen=True, unsafe_hash=True, eq=True)
+@dataclass(frozen=True, eq=True)
 class GroupMatch:
     root: Atom | None
     side_root: Atom | None
@@ -49,6 +55,9 @@ class GroupMatch:
         return f"group({self.atoms}, {self.tag.name})"
 
     __repr__ = __str__
+
+    def __hash__(self):
+        return hash((self.root, self.side_root, tuple(self.atoms), self.tag))
 
 
 class Matcher:
@@ -189,17 +198,6 @@ def amine_matcher(mol: Molecule):
     )
 
 
-def chained_amine_matcher(mol: Molecule):
-    """- N -"""
-    match = MatcherBuilder(mol, FunctionalGroup.AMINE)
-
-    return match.chain(
-        match.atom(symbol="C"),
-        match.atom(by="-", symbol="N", is_root=True),
-        match.atom(by="-", symbol="C"),
-    )
-
-
 def imine_matcher(mol: Molecule):
     """C = N"""
     match = MatcherBuilder(mol, FunctionalGroup.IMINE)
@@ -236,8 +234,8 @@ def oxy_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.OXY)
 
     return match.chain(
-        match.atom(symbol="C"),
-        match.atom(by="-", symbol="O", is_root=True),
+        match.atom(symbol="C", is_root=True),
+        match.atom(by="-", symbol="O"),
         match.atom(by="-", symbol="C", is_side_root=True),
     )
 
@@ -277,7 +275,6 @@ def get_matchers(molecule: Molecule):
         acid_matcher,
         oxy_matcher,
         alco_matcher,
-        chained_amine_matcher,
         ketone_matcher,
         amine_matcher,
         imine_matcher,
