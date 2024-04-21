@@ -81,7 +81,9 @@
         "ol": "ol",
         "thiol": "thiol",
         "amine": "amine",
-        "imine": "imine"
+        "imine": "imine",
+        "brom": "brom",
+        "chlor": "chlor"
     },
     "prefix": {
         "yl": "yl",

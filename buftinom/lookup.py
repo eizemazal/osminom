@@ -55,6 +55,8 @@ class FunctionalGroup(Enum):
     AMINE = _("functional-group.amine")
     IMINE = _("functional-group.imine")
     ESTER = _("functional-group.ester", sub=True)
+    BROM = _("functional-group.brom")
+    CHLOR = _("functional-group.chlor")
 
 
 class Infix(Enum):
@@ -144,10 +146,31 @@ MULTI_MULTI_BY_PREFIX = {
 }
 
 
-PREFFERED_AS_PREFFIXES = {FunctionalGroup.OXY, FunctionalGroup.AMINO}
+PREFFERED_AS_PREFFIXES = {
+    FunctionalGroup.BROM,
+    FunctionalGroup.CHLOR,
+}
 
 
-def is_preferred_prefix(name: FunctionalGroup):
+PREFFERED_IN_PREFFIXES = {
+    FunctionalGroup.OXY,
+    FunctionalGroup.AMINO,
+}
+
+CAN_SPLIT_NAME = {
+    FunctionalGroup.OXY,
+    FunctionalGroup.AMINO,
+}
+
+
+def is_preferred_in_prefix(name: FunctionalGroup):
+    if name in PREFFERED_IN_PREFFIXES:
+        return True
+
+    return False
+
+
+def is_preferred_as_prefix(name: FunctionalGroup):
     if name in PREFFERED_AS_PREFFIXES:
         return True
 
@@ -155,7 +178,7 @@ def is_preferred_prefix(name: FunctionalGroup):
 
 
 def provides_split(name: FunctionalGroup):
-    if name in PREFFERED_AS_PREFFIXES:
+    if name in CAN_SPLIT_NAME:
         return False
 
     return True

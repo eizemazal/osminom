@@ -291,6 +291,26 @@ def ketone_matcher(mol: Molecule):
     )
 
 
+def brom_matcher(mol: Molecule):
+    """Br - C"""
+    match = MatcherBuilder(mol, FunctionalGroup.BROM)
+
+    return match.chain(
+        match.atom(symbol="Br", is_terminal=True),
+        match.atom(by="-", symbol="C", is_root=True),
+    )
+
+
+def chlor_matcher(mol: Molecule):
+    """Cl - C"""
+    match = MatcherBuilder(mol, FunctionalGroup.CHLOR)
+
+    return match.chain(
+        match.atom(symbol="Cl", is_terminal=True),
+        match.atom(by="-", symbol="C", is_root=True),
+    )
+
+
 def ester_matcher(mol: Molecule):
     """O=C-O-C aka RCOOR"""
     match = MatcherBuilder(mol, FunctionalGroup.ESTER)
@@ -321,6 +341,8 @@ def get_matchers(molecule: Molecule):
         amine_matcher,
         imine_matcher,
         nitrile_matcher,
+        brom_matcher,
+        chlor_matcher,
     ]
 
     return [m(molecule) for m in matchers]

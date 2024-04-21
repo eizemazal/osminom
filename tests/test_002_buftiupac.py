@@ -204,6 +204,21 @@ def test_many_func_groups(smiles, expected):
 
 
 @pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("CCCBr", "brompropane"),
+        ("CC(Br)C", "2-brompropane"),
+        ("C(Br)C(Br)C", "1,2-dibrompropane"),
+        ("CCCCl", "chlorpropane"),
+        ("CC(Cl)C", "2-chlorpropane"),
+        ("C(Cl)C(Cl)C", "1,2-dichlorpropane"),
+    ],
+)
+def test_many_func_groups(smiles, expected):
+    assert get_name(smiles) == expected
+
+
+@pytest.mark.parametrize(
     "smiles,en,ru",
     [
         ("CCCC", "butane", "бутан"),
