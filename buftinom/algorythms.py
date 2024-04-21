@@ -8,7 +8,7 @@ from buftinom.funcgroups import GroupMatch, get_matchers
 from buftinom.lookup import (
     BOND_PRIORITY,
 )
-from buftinom.smileg import Atom, Bond, BondType, Molecule, is_carbon
+from buftinom.smileg import Atom, BondType, Molecule, is_carbon
 from buftinom.utils import filter_max
 
 ChainKey: TypeAlias = tuple[Atom, Atom]
@@ -32,7 +32,7 @@ def reversechain(chain: Chain) -> Chain:
 class SubchainConnection:
     parent: Atom
     peer: Atom
-    bond: Bond
+    bond: BondType
     via: GroupMatch | None
 
     def __hash__(self):
@@ -620,7 +620,7 @@ class Alogrythms:
             return SubchainConnection(
                 parent=base_atom,
                 peer=group_atom,
-                bond=self.mol.bonds[(base_atom, group_atom)],
+                bond=self.mol.bonds[(base_atom, group_atom)].type,
                 via=None,
             )
 

@@ -157,7 +157,7 @@ PREFFERED_IN_PREFFIXES = {
     FunctionalGroup.AMINO,
 }
 
-CAN_SPLIT_NAME = {
+WILL_NOT_SPLIT_NAME = {
     FunctionalGroup.OXY,
     FunctionalGroup.AMINO,
 }
@@ -178,7 +178,12 @@ def is_preferred_as_prefix(name: FunctionalGroup):
 
 
 def provides_split(name: FunctionalGroup):
-    if name in CAN_SPLIT_NAME:
+    """
+    If functional group have side_chain, and this chain splits name in two
+    I.e. Ester will split - CC(=O)OC - methane ethanoate
+         But oxy - will not - COC methoxymethane
+    """
+    if name in WILL_NOT_SPLIT_NAME:
         return False
 
     return True

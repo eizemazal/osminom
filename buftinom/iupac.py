@@ -403,13 +403,13 @@ class Iupac:
             if conn.via and is_preferred_in_prefix(conn.via.tag):
                 return Synt(feature.chain_index, conn.via.tag.value)
 
-            if conn.bond.type == BondType.SINGLE:
+            if conn.bond == BondType.SINGLE:
                 return Synt(feature.chain_index, Prefix.YL.value)
 
-            if conn.bond.type == BondType.DOUBLE:
+            if conn.bond == BondType.DOUBLE:
                 return Synt(feature.chain_index, Prefix.YLIDENE.value)
 
-            if conn.bond.type == BondType.TRIPLE:
+            if conn.bond == BondType.TRIPLE:
                 return Synt(feature.chain_index, Prefix.YLIDYNE.value)
 
         raise AssertionError(
