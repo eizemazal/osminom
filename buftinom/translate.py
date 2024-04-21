@@ -138,7 +138,7 @@ def translate(key: str, /, **forms: Unpack[FormParams]):
 
 __DICTIONARY = {}
 __LANG = None
-set_lang(get_os_lang())
+set_lang("en_US")
 
 
 __all__ = [
