@@ -22,7 +22,7 @@ def _deepget(path: tuple[str]):
     return dictionary
 
 
-def _get_os_lang():
+def get_os_lang():
     os_lang = os.getenv("LANG", "en_US.UTF-8")
     lang = os_lang.split(".")[0]
     return lang
@@ -33,11 +33,15 @@ def _load_dictionary(dict_path: os.PathLike):
         return json.load(f)
 
 
+def _lang_path():
+    return Path(__file__).parent / "translations"
+
+
 def set_lang(lang: str):
     global __DICTIONARY
     global __LANG
 
-    dict_path: Path = Path(__file__).parent / "translations" / (lang + ".json")
+    dict_path = _lang_path() / (lang + ".json")
     if not dict_path.is_file():
         print(
             f"Dict file {dict_path} is not found, switching back to en_US",
@@ -61,6 +65,12 @@ def override_lang(lang: str):
 def get_lang() -> str:
     global __LANG
     return __LANG
+
+
+def available_languages() -> list[str]:
+    path = _lang_path()
+
+    return [p.stem for p in path.glob("*.json")]
 
 
 def get_dict():
@@ -128,7 +138,7 @@ def translate(key: str, /, **forms: Unpack[FormParams]):
 
 __DICTIONARY = {}
 __LANG = None
-set_lang(_get_os_lang())
+set_lang(get_os_lang())
 
 
 __all__ = [
@@ -137,6 +147,7 @@ __all__ = [
     "get_lang",
     "get_dict",
     "override_lang",
+    "available_languages",
     "WordForm",
     "FormParams",
 ]

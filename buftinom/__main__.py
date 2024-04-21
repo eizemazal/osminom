@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from buftinom import Iupac, SmilesParser, iupac2str
 from buftinom.smileg import debug_atoms
+from buftinom.translate import available_languages, get_os_lang, override_lang
 
 
 @dataclass
@@ -19,6 +20,7 @@ class AppArgs:
     smiles: str
     verbose: bool
     quiet: bool
+    lang: str
 
 
 def parse_args():
@@ -39,15 +41,23 @@ def parse_args():
         help="print only final result (overrides -v)",
         action="store_true",
     )
+    arp.add_argument(
+        "--lang",
+        choices=["auto"] + available_languages(),
+        default="auto",
+        help="Translation language",
+    )
     args = AppArgs(**arp.parse_args().__dict__)
     if args.quiet:
         args.verbose = False
 
+    if args.lang == "auto":
+        args.lang = get_os_lang()
+
     return args
 
 
-def main():
-    args = parse_args()
+def main(args: AppArgs):
     debug_atoms(args.verbose)
 
     parser = SmilesParser(debug=args.verbose)
@@ -82,4 +92,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    with override_lang(args.lang):
+        main(args)
