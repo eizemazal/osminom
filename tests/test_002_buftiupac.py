@@ -171,7 +171,7 @@ def test_aromatic(smiles, expected):
         ("OCCC1C(CO)C1", "2-(2-methylolcyclopropyl)ethanol"),
         ("C1C(CCO)C1O", "2-ethyl-2-olcyclopropanol"),
         ("C1CC1=C", "1-methylidenecyclopropane"),
-        ("CC(=O)NC", ""),
+        ("CC(=O)NC", "1-methaminoethanone"),
         ("CC(=O)OC", "methane ethanoate"),
     ],
 )
@@ -183,7 +183,9 @@ def test_more_namings(smiles, expected):
     "smiles,expected",
     [
         ("CCCOCCC", "1-propoxypropane"),
-        # ("CCCNCCC", "hexan-3-amine"),
+        ("CCCNCCC", "1-propaminopropane"),
+        ("CCCNCCCNCCC", "1,3-dipropaminopropane"),
+        ("CCCCNCCCNCCC", "1-(3-propaminopropamino)butane"),
     ],
 )
 def test_splitted_by_func_group_molecules(smiles, expected):

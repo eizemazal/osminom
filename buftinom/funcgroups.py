@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+from functools import cached_property
 from typing import NotRequired, TypedDict, Unpack
 
 from buftinom.lookup import FunctionalGroup
-from buftinom.smileg import Bond, BondSymbol, Molecule
+from buftinom.smileg import Bond, BondSymbol, Molecule, is_not_carbon
 from osminom.atom import Atom
 
 
@@ -14,6 +15,16 @@ class AtomParams(TypedDict):
     is_root: NotRequired[bool]
     is_side_root: NotRequired[bool]
     is_terminal: NotRequired[bool]
+
+
+class GroupParams(TypedDict):
+    """Params of the group, how it behaves
+
+    is_symmetric - is it allowed to have root and side_root switch places
+        i.e. C-O-CC could be treated as CC-O-C
+    """
+
+    is_symmetric: NotRequired[bool]
 
 
 def structcmp(a1: Atom, a2: AtomParams):
@@ -35,9 +46,6 @@ def find(
         if not structcmp(a, via):
             continue
 
-        if via.get("is_terminal") and len(mol.adj[a]) > 1:
-            continue
-
         if "by" not in via:
             return a
         elif mol.bonds[(start, a)] == Bond.make(via["by"]):
@@ -50,6 +58,12 @@ class GroupMatch:
     side_root: Atom | None
     atoms: set[Atom]
     tag: FunctionalGroup
+    #
+    is_symmetric: bool
+
+    @cached_property
+    def func_atoms(self) -> set[Atom]:
+        return set(filter(is_not_carbon, self.atoms))
 
     def __str__(self):
         return f"group({self.atoms}, {self.tag.name})"
@@ -72,6 +86,7 @@ class Matcher:
         self.atom = atom
         self.next: list[Matcher] = []
         self.tag = tag
+        self.group_params = GroupParams()
 
     def then(self, **atom: Unpack[AtomParams]):
         nextm = Matcher(self.mol, atom)
@@ -86,6 +101,9 @@ class Matcher:
         self.next.extend(matchers)
         return self
 
+    def set_params(self, params: GroupParams):
+        self.group_params = params
+
     def matches(self, start: Atom, *, _visited: set[Atom] = None) -> GroupMatch | None:
         """
         The mach function
@@ -95,6 +113,9 @@ class Matcher:
         _visited = (_visited or set()) | {start}
 
         if not structcmp(start, self.atom):
+            return None
+
+        if self.atom.get("is_terminal") and len(self.mol.adj[start]) > 1:
             return None
 
         matches: list[GroupMatch] = []
@@ -135,7 +156,13 @@ class Matcher:
                     )
                 side_root = mtch.side_root
 
-        return GroupMatch(root=root, side_root=side_root, atoms=atoms, tag=self.tag)
+        return GroupMatch(
+            root=root,
+            side_root=side_root,
+            atoms=atoms,
+            tag=self.tag,
+            is_symmetric=self.group_params.get("is_symmetric", False),
+        )
 
 
 class MatcherBuilder:
@@ -148,13 +175,14 @@ class MatcherBuilder:
         self.mol = mol
         self.tag = tag
 
-    def chain(self, *matchers: Matcher):
+    def chain(self, *matchers: Matcher, **group_params: Unpack[GroupParams]):
         m1, *ms = matchers
         root = m1
 
         for matcher in ms:
             m1 = m1.add(matcher)
 
+        root.set_params(group_params)
         return root
 
     def atom(self, **atom: Unpack[AtomParams]) -> Matcher:
@@ -170,7 +198,7 @@ def alco_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.ALCOHOL)
 
     matcher = match.chain(
-        match.atom(symbol="O"),
+        match.atom(symbol="O", is_terminal=True),
         match.atom(by="-", symbol="C", is_root=True),
     )
 
@@ -182,9 +210,9 @@ def acid_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.CARBOXYLIC_ACID)
 
     return match.chain(
-        match.atom(symbol="O"),
+        match.atom(symbol="O", is_terminal=True),
         match.atom(by="=", symbol="C", is_root=True),
-        match.atom(by="-", symbol="O"),
+        match.atom(by="-", symbol="O", is_terminal=True),
     )
 
 
@@ -193,7 +221,7 @@ def amine_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.AMINE)
 
     return match.chain(
-        match.atom(symbol="N"),
+        match.atom(symbol="N", is_terminal=True),
         match.atom(by="-", symbol="C", is_root=True),
     )
 
@@ -203,7 +231,7 @@ def imine_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.IMINE)
 
     return match.chain(
-        match.atom(symbol="N"),
+        match.atom(symbol="N", is_terminal=True),
         match.atom(by="=", symbol="C", is_root=True),
     )
 
@@ -213,7 +241,7 @@ def nitrile_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.NITRILE)
 
     return match.chain(
-        match.atom(symbol="N"),
+        match.atom(symbol="N", is_terminal=True),
         match.atom(by="#", symbol="C", is_root=True),
     )
 
@@ -223,9 +251,9 @@ def acid_amide_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.AMIDE)
 
     return match.chain(
-        match.atom(symbol="O"),
+        match.atom(symbol="O", is_terminal=True),
         match.atom(by="=", symbol="C", is_root=True),
-        match.atom(by="-", symbol="N"),
+        match.atom(by="-", symbol="N", is_terminal=True),
     )
 
 
@@ -237,6 +265,19 @@ def oxy_matcher(mol: Molecule):
         match.atom(symbol="C", is_root=True),
         match.atom(by="-", symbol="O"),
         match.atom(by="-", symbol="C", is_side_root=True),
+        is_symmetric=True,
+    )
+
+
+def amino_matcher(mol: Molecule):
+    """- N -"""
+    match = MatcherBuilder(mol, FunctionalGroup.AMINO)
+
+    return match.chain(
+        match.atom(symbol="C", is_root=True),
+        match.atom(by="-", symbol="N"),
+        match.atom(by="-", symbol="C", is_side_root=True),
+        is_symmetric=True,
     )
 
 
@@ -245,7 +286,7 @@ def ketone_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.KETONE)
 
     return match.chain(
-        match.atom(symbol="O"),
+        match.atom(symbol="O", is_terminal=True),
         match.atom(by="=", symbol="C", is_root=True),
     )
 
@@ -255,7 +296,7 @@ def ester_matcher(mol: Molecule):
     match = MatcherBuilder(mol, FunctionalGroup.ESTER)
 
     return match.chain(
-        match.atom(symbol="O"),
+        match.atom(symbol="O", is_terminal=True),
         match.atom(by="=", symbol="C", is_root=True),
         match.atom(by="-", symbol="O"),
         match.atom(by="-", symbol="C", is_side_root=True),
@@ -274,6 +315,7 @@ def get_matchers(molecule: Molecule):
         acid_amide_matcher,
         acid_matcher,
         oxy_matcher,
+        amino_matcher,
         alco_matcher,
         ketone_matcher,
         amine_matcher,

@@ -242,7 +242,7 @@ class AtomFeatures:
     # self atom in this connection is peer
     connection: SubchainConnection
     subiupacs: list[IupacName]
-    functional_group: GroupMatch | None
+    functional_groups: list[GroupMatch]
 
 
 @dataclass
@@ -303,13 +303,13 @@ class Iupac:
             if parent_connection and a1 == parent_connection.peer:
                 parent = decomp.connected_by
 
-            func_group = decomp.functional_groups.get(a1)
-            if not is_carbon(a2):
-                nc_group = decomp.functional_groups.get(a2)
-                if func_group is not None and nc_group is not None:
-                    raise NotImplementedError(f"Multiple func groups on one atom {a1}")
+            func_groups = decomp.functional_groups.get(a1, [])
+            # if not is_carbon(a2):
+            #     nc_group = decomp.functional_groups.get(a2)
+            #     if func_group is not None and nc_group is not None:
+            #         raise NotImplementedError(f"Multiple func groups on one atom {a1}")
 
-                func_group = nc_group
+            #     func_group = nc_group
 
             index = i - non_carbons
             yield AtomFeatures(
@@ -317,7 +317,7 @@ class Iupac:
                 atom=a1,
                 bond_ahead=bond,
                 subiupacs=subiupacs.get(a1),
-                functional_group=func_group,
+                functional_groups=func_groups,
                 connection=parent,
             )
 
@@ -336,7 +336,7 @@ class Iupac:
             atom=last,
             bond_ahead=None,
             subiupacs=subiupacs.get(last),
-            functional_group=decomp.functional_groups.get(last),
+            functional_groups=decomp.functional_groups.get(last, []),
             connection=parent,
         )
 
@@ -408,8 +408,9 @@ class Iupac:
         """
         result = []
         for f in features:
-            if f.functional_group and not is_preferred_prefix(f.functional_group.tag):
-                result.append(Synt(f.chain_index, f.functional_group.tag.value))
+            for group in f.functional_groups:
+                if not is_preferred_prefix(group.tag):
+                    result.append(Synt(f.chain_index, group.tag.value))
         return result
 
     def children(self, dec: MolDecomposition):
@@ -457,6 +458,8 @@ class Iupac:
         "functional-group": 4,
     }
 
+    WEAK_FUNCTIONAL_GROUPS = set()
+
     def feature_connected(self, feature: AtomFeatures):
         return int(feature.connection is not None)
 
@@ -467,26 +470,30 @@ class Iupac:
 
     def feature_group(self, feature: AtomFeatures):
         prio = Iupac.PRIORITIES
-        if feature.functional_group is None:
+        if not feature.functional_groups:
             return 0
 
-        group_tag = feature.functional_group.tag.value
-        # future:    in weak functional group
-        if group_tag in {}:
-            return 0
+        score = 0
 
-        return prio.get("functional-group")
+        for group in feature.functional_groups:
+            group_tag = group.tag.value
+            if group_tag not in Iupac.WEAK_FUNCTIONAL_GROUPS:
+                score = prio.get("functional-group")
+
+        return score
 
     def feature_weak_group(self, feature: AtomFeatures):
         prio = Iupac.PRIORITIES
-        if feature.functional_group is None:
+        if not feature.functional_groups:
             return 0
 
-        group_tag = feature.functional_group.tag
-        if group_tag not in {}:
-            return 0
+        score = 0
+        for group in feature.functional_groups:
+            group_tag = group.tag.value
+            if group_tag in Iupac.WEAK_FUNCTIONAL_GROUPS:
+                score = prio.get("functional-group")
 
-        return prio.get("weak-functional-group")
+        return score
 
     def feature_subchain(self, feature: AtomFeatures):
         alphabetical = 0

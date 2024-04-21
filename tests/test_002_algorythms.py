@@ -119,7 +119,7 @@ def test_decompose(smiles):
 
 
 def test_decompose_multiple_connections():
-    algo = algorythms("CCB(C)(C)CC")
+    algo = algorythms("CCC(C)(C)CC")
 
     algo.mol.print_table()
 
@@ -128,7 +128,7 @@ def test_decompose_multiple_connections():
 
 
 def test_decompose_multiple_tree_connections():
-    algo = algorythms("CCCCB(C(N)C(P)C)(C(C)C(C)C)CCCC")
+    algo = algorythms("CCCCC(C(C)C(C)C)(C(C)C(C)C)CCCC")
 
     main = algo.decompose()
     main.print()

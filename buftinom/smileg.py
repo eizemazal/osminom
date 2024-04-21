@@ -16,6 +16,10 @@ def is_carbon(a: "Atom"):
     return a is not None and a.symbol.lower() == "c"
 
 
+def is_not_carbon(a: "Atom"):
+    return not is_carbon(a)
+
+
 @dataclass(slots=True, frozen=True)
 class Atom:
     id: int

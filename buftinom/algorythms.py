@@ -162,17 +162,23 @@ class Alogrythms:
         """
         matchers = get_matchers(self.mol)
 
-        result: dict[Atom, GroupMatch] = {}
-        group_atoms = set()
+        groups: dict[Atom, list[GroupMatch]] = defaultdict(list)
+        group_atoms: set[Atom] = set()
 
         for matcher in matchers:
             for atom in self.mol.atoms:
                 mtch = matcher.matches(atom)
-                if mtch and mtch.root not in result and not mtch.atoms & group_atoms:
-                    result[mtch.root] = mtch
-                    group_atoms |= mtch.atoms
+                if not mtch:
+                    continue
 
-        return result
+                match_atom_used = mtch.func_atoms & group_atoms
+
+                if not match_atom_used:
+                    groups[mtch.root].append(mtch)
+                    if not mtch.is_symmetric:
+                        group_atoms |= mtch.func_atoms
+
+        return groups
 
     @cached_property
     def functional_group_atoms(self):
@@ -182,12 +188,18 @@ class Alogrythms:
         This atoms used to ignore them during pathfinding
         """
         atoms: set[Atom] = set()
-        for func_group in self.functional_groups.values():
-            group_atoms = func_group.atoms - set(
-                a for a in func_group.atoms if is_carbon(a)
+        for func_groups in self.functional_groups.values():
+            for group in func_groups:
+                atoms |= group.func_atoms
+
+        nonfunc_atoms = set(self.mol.atoms) - atoms
+        noncarbon_func = list(filter(lambda a: not is_carbon(a), nonfunc_atoms))
+        if noncarbon_func:
+            raise NotImplementedError(
+                f"Atoms {noncarbon_func} is possibly a part of the"
+                + " functional group that is not yet supported"
             )
 
-            atoms |= group_atoms
         return atoms
 
     def cycle_exists(self, cycle_matchers: list[set[Atom]], cycle_atoms: set[Atom]):
@@ -599,8 +611,8 @@ class Alogrythms:
                     connections.add((e, atom))
                     break
 
-        # It is not supported yet bicyclo case
-        assert len(connections) <= 1, connections
+        if len(connections) > 1:
+            raise NotImplementedError(f"Bicyclo case, {connections}")
 
         if len(connections) == 1:
             base_atom, group_atom = connections.pop()
@@ -617,36 +629,47 @@ class Alogrythms:
         # group match connections
         connections: set[GroupMatch] = set()
 
-        for atom, func_group in self.chain_functional_groups(base_chain).items():
-            if func_group.side_root is None:
-                continue
+        for atom, func_groups in self.chain_functional_groups(base_chain).items():
+            for func_group in func_groups:
+                if func_group.side_root is None:
+                    continue
 
-            for chain in group:
-                for a in chain:
-                    if func_group.side_root == a:
-                        connections.add(func_group)
+                for chain in group:
+                    for a in chain:
+                        if func_group.side_root == a:
+                            connections.add(func_group)
 
-        # some nonsence
-        assert len(connections) == 1, connections
+        if len(connections) > 1:
+            raise NotImplementedError(f"Bicyclo case, {connections}")
 
-        match = connections.pop()
+        if len(connections) == 1:
+            match = connections.pop()
 
-        return SubchainConnection(
-            parent=match.root,
-            peer=match.side_root,
-            bond=BondType.SINGLE,
-            via=match,
-        )
+            return SubchainConnection(
+                parent=match.root,
+                peer=match.side_root,
+                bond=BondType.SINGLE,
+                via=match,
+            )
+
+        # No direct connections
+        return None
 
     def group_connections(self, groups: list[list[Chain]], chain: Chain):
         """
         for each group return atom by which this group connected to the chain
         """
         res: list[tuple[SubchainConnection, list[Chain]]] = []
+        connectles_group: list[Chain] = []
         for group in groups:
             connector = self.connection_point(group, chain)
-            res.append((connector, group))
-        return res
+            if connector:
+                res.append((connector, group))
+                continue
+
+            connectles_group.extend(group)
+
+        return res, connectles_group
 
     def chain_in_component(self, chain: Chain, component: set[Atom]):
         for atom in chain:
@@ -744,10 +767,13 @@ class Alogrythms:
             subchains = self.stripchains(chains, max_chain)
             components = self.components(subchains)
             chain_groups = self.group_by_components(subchains, components)
-            groups = self.group_connections(chain_groups, max_chain)
+            groups, connectles = self.group_connections(chain_groups, max_chain)
 
             for connection, groupped_chains in groups:
-                connections[connection].append(_decompose(groupped_chains, connection))
+                # Add all the chains without connections, to test
+                # if they are connected to current subgroup
+                summol_chains = groupped_chains + connectles
+                connections[connection].append(_decompose(summol_chains, connection))
 
             func_groups = self.chain_functional_groups(max_chain)
             is_cycle = self.chain_cycle(max_chain)

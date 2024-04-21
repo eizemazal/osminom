@@ -49,6 +49,7 @@ class FunctionalGroup(Enum):
     ALDEHYDE = _("functional-group.al")
     KETONE = _("functional-group.one")
     OXY = _("functional-group.oxy")
+    AMINO = _("functional-group.amino")
     ALCOHOL = _("functional-group.ol")
     THIOL = _("functional-group.thiol")
     AMINE = _("functional-group.amine")
@@ -143,15 +144,18 @@ MULTI_MULTI_BY_PREFIX = {
 }
 
 
+PREFFERED_AS_PREFFIXES = {FunctionalGroup.OXY, FunctionalGroup.AMINO}
+
+
 def is_preferred_prefix(name: FunctionalGroup):
-    if name == FunctionalGroup.OXY:
+    if name in PREFFERED_AS_PREFFIXES:
         return True
 
     return False
 
 
 def provides_split(name: FunctionalGroup):
-    if name == FunctionalGroup.OXY:
+    if name in PREFFERED_AS_PREFFIXES:
         return False
 
     return True
