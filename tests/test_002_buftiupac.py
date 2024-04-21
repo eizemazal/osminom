@@ -3,6 +3,7 @@ import pytest
 from buftinom.iupac import Iupac, iupac2str
 from buftinom.smileg import debug_atoms
 from buftinom.smiles_parser import SmilesParser
+from buftinom.translate import override_lang
 
 debug_atoms(True)
 
@@ -200,3 +201,17 @@ def test_splitted_by_func_group_molecules(smiles, expected):
 )
 def test_many_func_groups(smiles, expected):
     assert get_name(smiles) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,en,ru",
+    [
+        ("CCCC", "butane", "бутан"),
+        ("OCCCO", "propan-1,3-diol", "пропан-1,3-диол"),
+    ],
+)
+def test_translate(smiles, en, ru):
+    assert get_name(smiles) == en
+
+    with override_lang("ru_RU"):
+        assert get_name(smiles) == ru

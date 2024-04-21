@@ -1,107 +1,107 @@
 {
     "alphabet": {
-        "min": "A",
-        "max": "z"
+        "min": "А",
+        "max": "я"
     },
     "root": {
-        "meth": "meth",
-        "eth": "eth",
-        "prop": "prop",
-        "but": "but",
-        "pent": "pent",
-        "hex": "hex",
-        "hept": "hept",
-        "oct": "oct",
-        "non": "non",
-        "dec": "dec",
-        "undec": "undec",
-        "dodec": "dodec",
-        "tridec": "tridec",
-        "tetradec": "tetradec",
-        "pentadec": "pentadec",
-        "hexadec": "hexadec",
-        "heptadec": "heptadec",
-        "octadec": "octadec",
-        "nonadec": "nonadec",
-        "icos": "icos"
+        "meth": "мет",
+        "eth": "эт",
+        "prop": "проп",
+        "but": "бут",
+        "pent": "пент",
+        "hex": "гекс",
+        "hept": "гепт",
+        "oct": "окт",
+        "non": "нон",
+        "dec": "дек",
+        "undec": "ундек",
+        "dodec": "додек",
+        "tridec": "тридек",
+        "tetradec": "тетрадек",
+        "pentadec": "пентадек",
+        "hexadec": "гексадек",
+        "heptadec": "гептадек",
+        "octadec": "октадек",
+        "nonadec": "нондек",
+        "icos": "икос"
     },
     "aromatic": {
         "benzene": {
-            "norm": "benzene",
-            "sub": "phen"
+            "norm": "бензен",
+            "sub": "фен"
         }
     },
     "psuffix": {
         "ane": {
-            "norm": "ane",
-            "short": "an"
+            "norm": "ан",
+            "short": "ан"
         },
         "ene": {
-            "norm": "ene",
-            "short": "en"
+            "norm": "ен",
+            "short": "ен"
         },
         "diene": {
-            "norm": "diene",
-            "short": "diene"
+            "norm": "дике",
+            "short": "диен"
         },
         "yne": {
-            "norm": "yne",
-            "short": "yn"
+            "norm": "ин",
+            "short": "ин"
         },
         "diyne": {
-            "norm": "diyne",
-            "short": "diyne"
+            "norm": "диин",
+            "short": "диин"
         },
         "enyne": {
-            "norm": "enyne",
-            "short": "enyne"
+            "norm": "енин",
+            "short": "енин"
         }
     },
     "functional-group": {
         "carboxylic-acid": {
-            "norm": "oic acid",
-            "sub": "carboxylic acid"
+            "norm": "овая кислота",
+            "sub": "карбоксиловая кислота"
         },
         "amide": {
-            "norm": "amide",
-            "sub": "carboxamide"
+            "norm": "амид",
+            "sub": "карбоксиамид"
         },
         "nitrile": {
-            "norm": "nitrile",
-            "sub": "carbonitrile"
+            "norm": "нитрил",
+            "sub": "карбоксинитрил"
         },
         "ester": {
-            "norm": "oate",
-            "sub": "carboxylate"
+            "norm": "оат",
+            "sub": "карбоксилат"
         },
-        "al": "al",
-        "one": "one",
-        "oxy": "oxy",
-        "amino": "amino",
-        "ol": "ol",
-        "thiol": "thiol",
-        "amine": "amine",
-        "imine": "imine"
+        "al": "ал",
+        "one": "он",
+        "oxy": "окси",
+        "amino": "амино",
+        "ol": "ол",
+        "thiol": "тиол",
+        "amine": "амин",
+        "imine": "имин"
     },
     "prefix": {
-        "yl": "yl",
-        "ylidene": "ylidene",
-        "ylidyne": "ylidyne"
+        "yl": "ил",
+        "ylidene": "илиден",
+        "ylidyne": "илидин"
     },
     "multiplying": {
-        "di": "di",
-        "tri": "tri",
-        "tetra": "tetra",
-        "penta": "penta",
-        "bis": "bis",
-        "tris": "tris",
-        "tetrakis": "tetrakis",
-        "pentakis": "pentakis"
+        "di": "ди",
+        "tri": "три",
+        "tetra": "тетра",
+        "penta": "пента",
+        "bis": "бис",
+        "tris": "трис",
+        "tetrakis": "тетракис",
+        "pentakis": "пентакис"
     },
     "infix": {
-        "cyclo": "cyclo",
-        "spiro": "spiro",
-        "bicyclo": "bicyclo"
+        "cyclo": "цикло",
+        "spiro": "спиро",
+        "bicyclo": "бицикло"
     },
     "empty": ""
 }
