@@ -43,15 +43,15 @@ def parse_args():
     )
     arp.add_argument(
         "--lang",
-        choices=["auto"] + available_languages(),
-        default="auto",
-        help="Translation language",
+        choices=["os"] + available_languages(),
+        default="os",
+        help="Translation language, OS language by default",
     )
     args = AppArgs(**arp.parse_args().__dict__)
     if args.quiet:
         args.verbose = False
 
-    if args.lang == "auto":
+    if args.lang == "os":
         args.lang = get_os_lang()
 
     return args
