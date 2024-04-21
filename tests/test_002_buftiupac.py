@@ -190,3 +190,13 @@ def test_more_namings(smiles, expected):
 )
 def test_splitted_by_func_group_molecules(smiles, expected):
     assert get_name(smiles) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
+        ("CCCC(O)O", "butan-1,1-diol"),
+    ],
+)
+def test_many_func_groups(smiles, expected):
+    assert get_name(smiles) == expected

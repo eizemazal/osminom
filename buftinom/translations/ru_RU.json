@@ -25,6 +25,12 @@
         "nonadec": "nonadec",
         "icos": "icos"
     },
+    "aromatic": {
+        "benzene": {
+            "norm": "benzene",
+            "sub": "phen"
+        }
+    },
     "psuffix": {
         "ane": {
             "norm": "ane",
@@ -52,18 +58,35 @@
         }
     },
     "functional-group": {
-        "carboxylic-acid": "oic acid",
-        "amide": "amide",
-        "nitrite": "nitrite",
+        "carboxylic-acid": {
+            "norm": "oic acid",
+            "sub": "carboxylic acid"
+        },
+        "amide": {
+            "norm": "amide",
+            "sub": "carboxamide"
+        },
+        "nitrile": {
+            "norm": "nitrile",
+            "sub": "carbonitrile"
+        },
+        "ester": {
+            "norm": "oate",
+            "sub": "carboxylate"
+        },
         "al": "al",
         "one": "one",
+        "oxy": "oxy",
+        "amino": "amino",
         "ol": "ol",
         "thiol": "thiol",
         "amine": "amine",
         "imine": "imine"
     },
     "prefix": {
-        "yl": "yl"
+        "yl": "yl",
+        "ylidene": "ylidene",
+        "ylidyne": "ylidyne"
     },
     "multiplying": {
         "di": "di",
