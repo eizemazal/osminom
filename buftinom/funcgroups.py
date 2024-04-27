@@ -282,6 +282,16 @@ def amino_matcher(mol: Molecule):
 
 
 def ketone_matcher(mol: Molecule):
+    """O = C(C)(C)"""
+    match = MatcherBuilder(mol, FunctionalGroup.KETONE)
+
+    return match.chain(
+        match.atom(symbol="O", is_terminal=True),
+        match.atom(by="=", symbol="C", is_root=True),
+    )
+
+
+def aldehyde_matcher(mol: Molecule):
     """O = C"""
     match = MatcherBuilder(mol, FunctionalGroup.KETONE)
 

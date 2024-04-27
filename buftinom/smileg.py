@@ -20,6 +20,13 @@ def is_not_carbon(a: "Atom"):
     return not is_carbon(a)
 
 
+def s(val, template):
+    if val is None:
+        return ""
+
+    return template % val
+
+
 @dataclass(slots=True)
 class Atom:
     id: int
@@ -30,20 +37,18 @@ class Atom:
     charge: int = 0
     auto: bool = True  # Valence and charge determined automatically
 
+    def _str_manual(self):
+        isotope = s(self.isotope, "%d")
+        chirality = s(self.chirality, "@%s")
+        hydrogens = s(self.hydrogen, "H%d")
+        charge = s(self.charge, "%+d")
+        if self.charge and abs(self.charge) == 1:
+            charge = charge.replace("1", "")
+        return f"[{isotope}{self.symbol}{chirality}{hydrogens}{charge}]"
+
     def __str__(self):
-        if (
-            self.isotope is not None
-            or self.hydrogen is not None
-            or self.chirality is not None
-            or self.charge != 0
-        ):
-            isotope = f"{self.isotope}" if self.isotope else ""
-            chirality = f"@{self.chirality}" if self.chirality else ""
-            hydrogens = f"H{self.hydrogen}" if self.hydrogen else ""
-            charge = f"{self.charge:+}" if self.charge else ""
-            if self.charge and abs(self.charge) == 1:
-                charge = charge.replace("1", "")
-            return f"[{isotope}{self.symbol}{chirality}{hydrogens}{charge}]"
+        if not self.auto:
+            return self._str_manual()
 
         if DEBUG_ATOMS:
             return f"{self.symbol}'{self.id}"

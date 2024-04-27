@@ -165,6 +165,30 @@ def test_submolecule_cyclo_intersect(parser):
                 "chirality": "@@",
             },
         ),
+        (
+            "C",
+            {
+                "symbol": "C",
+                "charge": 0,
+                "hydrogen": 4,
+            },
+        ),
+        (
+            "[H]",
+            {
+                "symbol": "H",
+                "charge": 0,
+                "hydrogen": 1,
+            },
+        ),
+        (
+            "N",
+            {
+                "symbol": "N",
+                "charge": 0,
+                "hydrogen": 3,
+            },
+        ),
     ],
 )
 def test_atom(parser, atom, expected):
