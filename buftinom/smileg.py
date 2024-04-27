@@ -261,6 +261,12 @@ class MoleculeConstructor(Molecule):
             unique_used.add((a2, a1))
             yield a1, b, a2
 
+    def assert_closures_closed(self):
+        if not self._closures:
+            return
+
+        raise ValueError(f"Invalid smiles, cycle(s) not closed {list(self._closures)}")
+
 
 def _scenter(obj, w):
     return f"{str(obj):^{w}}"

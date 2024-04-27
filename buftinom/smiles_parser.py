@@ -191,6 +191,7 @@ class SmilesParser:
         mols = self.parser.parse(smiles_str, lexer=self.lexer, debug=self.debug)
 
         for mol in mols:
+            mol.assert_closures_closed()
             fill_valence(mol)
 
         return mols

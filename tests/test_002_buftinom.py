@@ -214,3 +214,18 @@ def test_assert_valence(parser, smiles):
     with pytest.raises(ValueError):
         (mol,) = parser.parse(smiles)
         mol.print_table()
+
+
+@pytest.mark.parametrize(
+    "smiles",
+    [
+        "CCCC1",
+        "CCCC1CC2C1",
+        "CCC3C1CC2C1",
+    ],
+)
+def test_assert_invalid_cycles(parser, smiles):
+    with pytest.raises(ValueError):
+        (mol,) = parser.parse(smiles)
+        mol.print_table()
+        print(mol._closures)
