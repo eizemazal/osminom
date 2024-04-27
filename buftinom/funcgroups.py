@@ -3,8 +3,7 @@ from functools import cached_property
 from typing import NotRequired, TypedDict, Unpack
 
 from buftinom.lookup import FunctionalGroup
-from buftinom.smileg import Bond, BondSymbol, Molecule, is_not_carbon
-from osminom.atom import Atom
+from buftinom.smileg import Atom, Bond, BondSymbol, Molecule, is_not_carbon
 
 
 class AtomParams(TypedDict):
@@ -12,6 +11,9 @@ class AtomParams(TypedDict):
 
     by: NotRequired[BondSymbol]
     symbol: str
+    hydrogen: int
+
+    #
     is_root: NotRequired[bool]
     is_side_root: NotRequired[bool]
     is_terminal: NotRequired[bool]
@@ -28,7 +30,10 @@ class GroupParams(TypedDict):
 
 
 def structcmp(a1: Atom, a2: AtomParams):
-    return a1.symbol.lower() == a2["symbol"].lower()
+    sym_eq = a1.symbol.lower() == a2["symbol"].lower()
+    h_eq = a1.hydrogen == a2.get("hydrogen", a1.hydrogen)
+
+    return sym_eq and h_eq
 
 
 def find(
@@ -144,7 +149,8 @@ class Matcher:
             if mtch.root is not None:
                 if root is not None:
                     raise ValueError(
-                        f"Multiple match root found ({root}, {mtch.root}). Use only one atom as root"
+                        f"Multiple match root found ({root}, {mtch.root})."
+                        + " Use only one atom as root"
                     )
 
                 root = mtch.root
@@ -152,7 +158,8 @@ class Matcher:
             if mtch.side_root is not None:
                 if side_root is not None:
                     raise ValueError(
-                        f"Multiple sideroots ({side_root}, {mtch.side_root}) Use only one atom as side_root"
+                        f"Multiple sideroots ({side_root}, {mtch.side_root}) "
+                        + "Use only one atom as side_root"
                     )
                 side_root = mtch.side_root
 
@@ -287,17 +294,17 @@ def ketone_matcher(mol: Molecule):
 
     return match.chain(
         match.atom(symbol="O", is_terminal=True),
-        match.atom(by="=", symbol="C", is_root=True),
+        match.atom(by="=", symbol="C", hydrogen=0, is_root=True),
     )
 
 
 def aldehyde_matcher(mol: Molecule):
     """O = C"""
-    match = MatcherBuilder(mol, FunctionalGroup.KETONE)
+    match = MatcherBuilder(mol, FunctionalGroup.ALDEHYDE)
 
     return match.chain(
         match.atom(symbol="O", is_terminal=True),
-        match.atom(by="=", symbol="C", is_root=True),
+        match.atom(by="=", symbol="C", hydrogen=1, is_root=True),
     )
 
 
@@ -347,6 +354,7 @@ def get_matchers(molecule: Molecule):
         oxy_matcher,
         amino_matcher,
         alco_matcher,
+        aldehyde_matcher,
         ketone_matcher,
         amine_matcher,
         imine_matcher,

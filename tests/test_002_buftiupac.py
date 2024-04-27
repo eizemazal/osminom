@@ -196,6 +196,17 @@ def test_splitted_by_func_group_molecules(smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
+        ("CCC=O", "propanal"),
+        ("C(=O)CC", "propanone"),
+    ],
+)
+def test_ketonealdehyde(smiles, expected):
+    assert get_name(smiles) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
         ("CCCC(O)O", "butan-1,1-diol"),
     ],
 )
@@ -212,7 +223,6 @@ def test_many_func_groups(smiles, expected):
         ("CCCCl", "chlorpropane"),
         ("CC(Cl)C", "2-chlorpropane"),
         ("C(Cl)C(Cl)C", "1,2-dichlorpropane"),
-        # ("OC(=O)CC(C(=O))C(=O)O", ""),
     ],
 )
 def test_many_func_groups(smiles, expected):
