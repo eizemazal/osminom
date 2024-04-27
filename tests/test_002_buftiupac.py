@@ -48,7 +48,7 @@ def get_name(smiles):
         ("CC=CCC#CC", "hept-2-en-5-yne"),
         ("CCC=CC#CC", "hept-4-en-2-yne"),
         #
-        ("C=C#C", "propen-2-yne"),
+        ("C=CC#C", "buten-3-yne"),
         ("CC=C=CC", "pent-2,3-diene"),
     ],
 )
@@ -173,7 +173,7 @@ def test_aromatic(smiles, expected):
         ("C1C(CCO)C1O", "2-ethyl-2-olcyclopropanol"),
         ("C1CC1=C", "1-methylidenecyclopropane"),
         ("CC(=O)NC", "1-methaminoethanone"),
-        ("CC(=O)OC", "methane ethanoate"),
+        ("CC(=O)OC", "methyl ethanoate"),
     ],
 )
 def test_more_namings(smiles, expected):
@@ -212,6 +212,7 @@ def test_many_func_groups(smiles, expected):
         ("CCCCl", "chlorpropane"),
         ("CC(Cl)C", "2-chlorpropane"),
         ("C(Cl)C(Cl)C", "1,2-dichlorpropane"),
+        # ("OC(=O)CC(C(=O))C(=O)O", ""),
     ],
 )
 def test_many_func_groups(smiles, expected):

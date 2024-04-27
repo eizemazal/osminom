@@ -174,3 +174,19 @@ def test_atom(parser, atom, expected):
 
     for key, value in expected.items():
         assert getattr(atom, key) == value
+
+
+@pytest.mark.parametrize(
+    "smiles",
+    [
+        "C#C#C",
+        "C(C)(C)(C)(C)(C)",
+        "CCC(#C)CCC",
+        "CCC(=N=C)CCC",
+        "CC(#N)CC",
+    ],
+)
+def test_assert_valence(parser, smiles):
+    with pytest.raises(ValueError):
+        (mol,) = parser.parse(smiles)
+        mol.print_table()

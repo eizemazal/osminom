@@ -63,6 +63,6 @@ parser_tests = [
     ("C", True),
     ("CCCCC", True),
     ("CCC.CC.CCC.CCC", True),
-    ("CC-C=C#C:C", True),
+    ("CC-C=CC#C:C", True),
     ("C12C3C4C1C5C4C3C25", True),
 ]

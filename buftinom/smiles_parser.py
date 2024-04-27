@@ -6,6 +6,7 @@ import ply.yacc as yacc
 
 from buftinom.smileg import Atom, Bond, Molecule, MoleculeConstructor
 from buftinom.smiles_lexer import SmilesLexer
+from buftinom.valence import assert_valence
 
 
 class SmilesParser:
@@ -185,4 +186,9 @@ class SmilesParser:
         raise ValueError(f"Syntax error: {p}")
 
     def parse(self, smiles_str: str) -> list[Molecule]:
-        return self.parser.parse(smiles_str, lexer=self.lexer, debug=self.debug)  #
+        mols = self.parser.parse(smiles_str, lexer=self.lexer, debug=self.debug)
+
+        for mol in mols:
+            assert_valence(mol)
+
+        return mols

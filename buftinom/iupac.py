@@ -444,7 +444,7 @@ class Iupac:
                     subiupac = self.decompose_name(subchain, primary=False)
                     preffixes[connection.parent].append(subiupac)
                 else:
-                    subiupac = self.decompose_name(subchain, primary=True)
+                    subiupac = self.decompose_name(subchain, primary=False)
                     subnames.append(subiupac)
                 #
 
