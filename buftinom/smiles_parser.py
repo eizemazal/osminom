@@ -6,7 +6,7 @@ import ply.yacc as yacc
 
 from buftinom.smileg import Atom, Bond, Molecule, MoleculeConstructor
 from buftinom.smiles_lexer import SmilesLexer
-from buftinom.valence import assert_valence
+from buftinom.valence import fill_valence
 
 
 class SmilesParser:
@@ -115,6 +115,7 @@ class SmilesParser:
             chirality=chirality,
             hydrogen=hydrogen,
             charge=charge,
+            auto=False,
         )
 
     def p_atom_parametrized_h(self, p: tuple[None, str, int, str, int, int, str]):
@@ -126,6 +127,7 @@ class SmilesParser:
             isotope=isotope,
             chirality=chirality,
             charge=charge,
+            auto=False,
         )
 
     def p_isotope(self, p: tuple[None, int]):
@@ -189,6 +191,6 @@ class SmilesParser:
         mols = self.parser.parse(smiles_str, lexer=self.lexer, debug=self.debug)
 
         for mol in mols:
-            assert_valence(mol)
+            fill_valence(mol)
 
         return mols

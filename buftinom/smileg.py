@@ -20,7 +20,7 @@ def is_not_carbon(a: "Atom"):
     return not is_carbon(a)
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class Atom:
     id: int
     symbol: str
@@ -28,6 +28,7 @@ class Atom:
     chirality: str | None = None
     hydrogen: int | None = None
     charge: int = 0
+    auto: bool = True  # Valence and charge determined automatically
 
     def __str__(self):
         if (
