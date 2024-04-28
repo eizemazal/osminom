@@ -196,7 +196,6 @@ def test_groups_as_preffixes(smiles, expected):
         ("C1CCCCC1N", "cyclohexanamine"),
         ("C1CCCC(=O)CC(C#N)CCC1", "cyclodecanenitrile-3-one"),
         ("C1CC(C(=O)O)CCC1", "cyclohexanoic acid"),
-        ("C(=O)OCCOC(=O)C", ""),
         ("OC(=O)CC(C(=O))C(=O)O", "2-formylbutane-1,4-dioic acid"),
         ("C1CCCCC1=O", "cyclohexanone"),
         ("c1ccncc1", "pyridine"),

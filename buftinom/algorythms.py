@@ -786,6 +786,28 @@ class Alogrythms:
 
         return ffg
 
+    def all_atoms(self, decomp: MolDecomposition):
+        atoms = set(decomp.chain)
+        for groups in decomp.functional_groups.values():
+            for group in groups:
+                atoms |= group.atoms
+
+        for conns in decomp.connections.values():
+            for conn in conns:
+                atoms |= self.all_atoms(conn)
+
+        return atoms
+
+    def validate(self, decomp: MolDecomposition):
+        atoms = self.all_atoms(decomp)
+        mol_atoms = set(self.mol.atoms)
+
+        if atoms != mol_atoms:
+            raise ValueError(
+                "Cannot figure molecule structure. "
+                + "Molecule, is invalid or, more likely, not supported 🫡"
+            )
+
     def decompose(self):
         """
         Crate decomposition of the Molecule
@@ -838,4 +860,7 @@ class Alogrythms:
                 functional_groups=func_groups,
             )
 
-        return _decompose(cycles + chains, None)
+        final_decomposition = _decompose(cycles + chains, None)
+        self.validate(final_decomposition)
+
+        return final_decomposition
