@@ -12,11 +12,13 @@ from buftinom.lookup import (
     MULTI_MULTI_BY_PREFIX,
     ROOT_BY_LENGTH,
     Aromatic,
+    FunctionalGroup,
     Infix,
     Prefix,
     PrimarySuffix,
-    is_preferred_as_prefix,
-    is_preferred_in_prefix,
+    is_always_preferred_as_prefix,
+    is_preferred_as_prefix_in_subchain,
+    is_preferred_in_subprefix,
     provides_split,
 )
 from buftinom.models import IupacName, Subn, Synt
@@ -94,7 +96,7 @@ def all_suffixes2str(iupac: IupacName):
 
 
 def func_preffixes2str(iupac: IupacName, *, separate: bool):
-    preffixes, _ = suffixes2str(iupac.func_preffixes, "norm")
+    preffixes, _ = suffixes2str(iupac.func_preffixes, "pref")
     preffixes_str = "".join(preffixes)
 
     if not separate:
@@ -239,6 +241,7 @@ class Iupac:
         self,
         features: list[AtomFeatures],
         connector: SubchainConnection,
+        *,
         primary: bool,
     ):
         if primary:
@@ -250,7 +253,7 @@ class Iupac:
 
             conn = feature.connection
 
-            if conn.via and is_preferred_in_prefix(conn.via.tag):
+            if conn.via and is_preferred_in_subprefix(conn.via.tag):
                 return Synt(feature.chain_index, conn.via.tag.value)
 
             if conn.bond == BondType.SINGLE:
@@ -266,6 +269,28 @@ class Iupac:
             f"Connector {connector} is not connected to the chain {features}"
         )
 
+    def preffered_in_preffix(self, group: FunctionalGroup, *, primary: bool):
+        always = is_always_preferred_as_prefix(group)
+        in_subchain = not primary and is_preferred_as_prefix_in_subchain(group)
+
+        return always or in_subchain
+
+    def functional_preffixes(self, features: list[AtomFeatures], *, primary: bool):
+        """
+        Give indexes to the found functional preffixes
+        """
+        result: list[Synt] = []
+
+        for feature in features:
+            for group in feature.functional_groups:
+                if is_preferred_in_subprefix(group.tag):
+                    continue
+
+                if self.preffered_in_preffix(group.tag, primary=primary):
+                    result.append(Synt(feature.chain_index, group.tag.value))
+
+        return result
+
     def functional_suffixes(self, features: list[AtomFeatures], *, primary: bool):
         """
         Collect all functional suffixed of the chain based on the functional groups it have
@@ -273,11 +298,12 @@ class Iupac:
         result = []
         for f in features:
             for group in f.functional_groups:
-                is_suffix = not is_preferred_in_prefix(group.tag)
-                is_suffix = is_suffix and not is_preferred_as_prefix(group.tag)
+                if is_preferred_in_subprefix(group.tag):
+                    continue
 
-                if is_suffix:
+                if not self.preffered_in_preffix(group.tag, primary=primary):
                     result.append(Synt(f.chain_index, group.tag.value))
+
         return result
 
     def children(self, dec: MolDecomposition):
@@ -290,11 +316,11 @@ class Iupac:
         for connection, subchains in dec.connections.items():
             for subchain in subchains:
                 #
+                subiupac = self.decompose_name(subchain, primary=False)
+
                 if connection.via is None or not provides_split(connection.via.tag):
-                    subiupac = self.decompose_name(subchain, primary=False)
                     preffixes[connection.parent].append(subiupac)
                 else:
-                    subiupac = self.decompose_name(subchain, primary=False)
                     subnames.append(subiupac)
                 #
 
@@ -312,19 +338,6 @@ class Iupac:
             if preffixes := all_preffixes.get(feature.atom):
                 for preffix in preffixes:
                     result.append(Subn(feature.chain_index, preffix))
-        return result
-
-    def functional_preffixes(self, features: list[AtomFeatures]):
-        """
-        Give indexes to the found functional preffixes
-        """
-        result: list[Synt] = []
-
-        for feature in features:
-            for group in feature.functional_groups:
-                if is_preferred_as_prefix(group.tag):
-                    result.append(Synt(feature.chain_index, group.tag.value))
-
         return result
 
     def root_word(self, decomp: MolDecomposition, features: list[AtomFeatures]):
@@ -349,17 +362,18 @@ class Iupac:
         Recursively convert given decomposition to the IupacName.
         """
         #
-        subnames, unordered_preffixes = self.children(decomp)
+        subnames, subname_preffixes = self.children(decomp)
         #
-        decomp, features = self.features.fpod(decomp, unordered_preffixes)
+        decomp, features = self.features.fpod(decomp, subname_preffixes)
 
-        preffixes = self.index_preffixes(features, unordered_preffixes)
-        func_preffixes = self.functional_preffixes(features)
+        preffixes = self.index_preffixes(features, subname_preffixes)
+        #
+        func_preffixes = self.functional_preffixes(features, primary=primary)
         infix = self.infix(decomp, features)
         #
         root = self.root_word(decomp, features)
         #
-        subsuff = self.subsuffix(features, decomp.connected_by, primary)
+        subsuff = self.subsuffix(features, decomp.connected_by, primary=primary)
         suffix = self.suffixes_by_features(decomp, features, primary=primary)
         func_suffixes = self.functional_suffixes(features, primary=primary)
 

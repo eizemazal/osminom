@@ -152,7 +152,7 @@ PREFFERED_AS_PREFFIXES = {
 }
 
 
-PREFFERED_IN_PREFFIXES = {
+PREFFERED_IN_SUBPREFFIXES = {
     FunctionalGroup.OXY,
     FunctionalGroup.AMINO,
 }
@@ -163,15 +163,22 @@ WILL_NOT_SPLIT_NAME = {
 }
 
 
-def is_preferred_in_prefix(name: FunctionalGroup):
-    if name in PREFFERED_IN_PREFFIXES:
+def is_preferred_in_subprefix(name: FunctionalGroup):
+    if name in PREFFERED_IN_SUBPREFFIXES:
         return True
 
     return False
 
 
-def is_preferred_as_prefix(name: FunctionalGroup):
+def is_always_preferred_as_prefix(name: FunctionalGroup):
     if name in PREFFERED_AS_PREFFIXES:
+        return True
+
+    return False
+
+
+def is_preferred_as_prefix_in_subchain(name: FunctionalGroup):
+    if name.value.has_form("pref"):
         return True
 
     return False
