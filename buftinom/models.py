@@ -47,7 +47,7 @@ class IupacName:
     func_preffixes: list[Synt]
     root_word: WordForm
     prime_suffixes: list[Synt]
-    sub_suffix: Synt = None
+    sub_suffixes: list[Synt]
     func_suffixes: list[Synt]
     ref: MolDecomposition
 
@@ -64,7 +64,7 @@ class IupacName:
                     self.func_preffixes,
                     self.root_word,
                     self.prime_suffixes,
-                    self.sub_suffix,
+                    self.sub_suffixes,
                     self.func_suffixes,
                 ],
             )

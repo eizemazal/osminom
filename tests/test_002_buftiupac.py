@@ -115,11 +115,11 @@ def test_cycle_names(smiles, expected):
     [
         ("CCCO", "propanol"),
         ("OCCC", "propanol"),
-        ("CC(O)C", "propan-2-ol"),
-        ("CC(O)C(O)C", "butan-2,3-diol"),
+        ("CC(O)C", "propane-2-ol"),
+        ("CC(O)C(O)C", "butane-2,3-diol"),
         ("CCC(=O)O", "propanoic acid"),
         ("CCC(O)=O", "propanoic acid"),
-        ("C(O)(=O)CC(O)=O", "propan-1,3-dioic acid"),
+        ("C(O)(=O)CC(O)=O", "propane-1,3-dioic acid"),
         ("CCCN", "propanamine"),
         ("CC(C)CCCO", "4-methylpentanol"),
         ("C1CCC(O)CC1", "cyclohexanol"),
@@ -179,18 +179,21 @@ def test_groups_as_preffixes(smiles, expected):
         #
         ("CO", "methanol"),
         ("C(=O)O", "methanoic acid"),
-        ("OCCO", "ethan-1,2-diol"),
+        ("OCCO", "ethane-1,2-diol"),
         ("C1CC1C(CO)C", "2-cyclopropylpropanol"),
         ("C1CC1CCCC1CC1", "1-(3-cyclopropylpropyl)cyclopropane"),
         #
         ("c1cc(CCO)ccc1CC", "2-(4-ethylphenyl)ethanol"),
         ("CCCOC", "1-methoxypropane"),
-        ("CC(=O)CC", "butan-2-one"),
+        ("CC(=O)CC", "butane-2-one"),
         ("OCCC1C(CO)C1", "2-(2-hydroxymethylcyclopropyl)ethanol"),
         ("C1C(CCO)C1O", "2-(2-hydroxyethyl)cyclopropanol"),
         ("C1CC1=C", "1-methylidenecyclopropane"),
-        ("CC(=O)NC", "1-methaminoethanone"),
+        ("CC(=O)NC", "1-methylaminoethanone"),
         ("CC(=O)OC", "methyl ethanoate"),
+        ("NCCN", "ethane-1,2-diamine"),
+        ("c1ccccc1N", "aminobenzene"),
+        ("C1CCCCC1N", "cyclohexanamine"),
         ("C(=O)OCCOC(=O)C", ""),
     ],
 )
@@ -202,10 +205,11 @@ def test_more_namings(smiles, expected):
     "smiles,expected",
     [
         ("CCCOCCC", "1-propoxypropane"),
-        ("CCCNCCC", "1-propaminopropane"),
-        ("CCCNCCCNCCC", "1,3-dipropaminopropane"),
-        ("CCCCNCCCNCCC", "1-(3-propaminopropamino)butane"),
+        ("CCCNCCC", "1-propylaminopropane"),
+        ("CCCNCCCNCCC", "1,3-dipropylaminopropane"),
+        ("CCCCNCCCNCCC", "1-(3-propylaminopropylamino)butane"),
         ("OCCOCCO", "2-(2-hydroxyethoxy)ethanol"),
+        ("CNC", "1-methylaminomethane"),
     ],
 )
 def test_splitted_by_func_group_molecules(smiles, expected):
@@ -216,7 +220,7 @@ def test_splitted_by_func_group_molecules(smiles, expected):
     "smiles,expected",
     [
         ("CCC=O", "propanal"),
-        ("CC(=O)CC", "butan-2-one"),
+        ("CC(=O)CC", "butane-2-one"),
     ],
 )
 def test_ketonealdehyde(smiles, expected):
@@ -226,7 +230,7 @@ def test_ketonealdehyde(smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
-        ("CCCC(O)O", "butan-1,1-diol"),
+        ("CCCC(O)O", "butane-1,1-diol"),
     ],
 )
 def test_many_func_groups(smiles, expected):
@@ -253,7 +257,7 @@ def test_halo_groups(smiles, expected):
     "smiles,en,ru",
     [
         ("CCCC", "butane", "бутан"),
-        ("OCCCO", "propan-1,3-diol", "пропан-1,3-диол"),
+        ("OCCCO", "propane-1,3-diol", "пропан-1,3-диол"),
     ],
 )
 def test_translate(smiles, en, ru):

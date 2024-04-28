@@ -159,31 +159,37 @@ PREFFERED_IN_SUBPREFFIXES = {
     FunctionalGroup.AMINO,
 }
 
+UNIQUE_SUBSUFFIX = {
+    FunctionalGroup.OXY,
+}
+
+
+PREFFIX_IN_AROMATIC = {
+    FunctionalGroup.AMINE,
+    FunctionalGroup.NITRO,
+}
+
+
 WILL_NOT_SPLIT_NAME = {
     FunctionalGroup.OXY,
     FunctionalGroup.AMINO,
 }
 
 
-def is_preferred_in_subprefix(name: FunctionalGroup):
-    if name in PREFFERED_IN_SUBPREFFIXES:
-        return True
+def is_preffix_in_arimatic(name: FunctionalGroup):
+    return name in PREFFIX_IN_AROMATIC
 
-    return False
+
+def is_preferred_in_subprefix(name: FunctionalGroup):
+    return name in PREFFERED_IN_SUBPREFFIXES
 
 
 def is_always_preferred_as_prefix(name: FunctionalGroup):
-    if name in PREFFERED_AS_PREFFIXES:
-        return True
-
-    return False
+    return name in PREFFERED_AS_PREFFIXES
 
 
 def is_preferred_as_prefix_in_subchain(name: FunctionalGroup):
-    if name.value.has_form("pref"):
-        return True
-
-    return False
+    return name.value.has_form("pref")
 
 
 def provides_split(name: FunctionalGroup):
@@ -192,7 +198,4 @@ def provides_split(name: FunctionalGroup):
     I.e. Ester will split - CC(=O)OC - methane ethanoate
          But oxy - will not - COC methoxymethane
     """
-    if name in WILL_NOT_SPLIT_NAME:
-        return False
-
-    return True
+    return name not in WILL_NOT_SPLIT_NAME
