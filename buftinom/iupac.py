@@ -45,6 +45,25 @@ def manyidx2str(name: WordForm, ids: list[int], form: WordFormName):
     return ["-", index, "-", multi.value.norm, name.get(form)]
 
 
+def select_form(groups: list[tuple[WordForm, list[int]]], form: WordFormName):
+    for id, (name, ids) in enumerate(groups):
+        if form != "short":
+            yield form, name, ids
+            continue
+
+        if id + 1 >= len(groups):
+            yield form, name, ids
+            continue
+
+        _, next_ids = groups[id + 1]
+
+        if len(next_ids) > 1 or next_ids[0] > 1:
+            yield "norm", name, ids
+            continue
+
+        yield form, name, ids
+
+
 def suffixes2str(suffixes: list[Synt], form: WordFormName):
     """
     Joins the given suffixes to string, selects appropriate word forms,
@@ -61,12 +80,13 @@ def suffixes2str(suffixes: list[Synt], form: WordFormName):
         groupped[name].append(idx)
 
     groups = sorted(groupped.items(), key=lambda g: g[0])
+
     lastname = None
-    for name, ids in groups:
+    for frm, name, ids in select_form(groups, form):
         if len(ids) > 1:
-            res.extend(manyidx2str(name, ids, form))
+            res.extend(manyidx2str(name, ids, frm))
         else:
-            res.extend(singleidx2str(name, ids[0], form))
+            res.extend(singleidx2str(name, ids[0], frm))
 
         lastname = name
 

@@ -45,10 +45,10 @@ def get_name(smiles):
         ("CC#CC", "but-2-yne"),
         #
         ("CCCCC", "pentane"),
-        ("CC=CCC#CC", "hept-2-en-5-yne"),
-        ("CCC=CC#CC", "hept-4-en-2-yne"),
+        ("CC=CCC#CC", "hept-2-ene-5-yne"),
+        ("CCC=CC#CC", "hept-4-ene-2-yne"),
         #
-        ("C=CC#C", "buten-3-yne"),
+        ("C=CC#C", "butene-3-yne"),
         ("CC=C=CC", "pent-2,3-diene"),
     ],
 )
@@ -84,7 +84,7 @@ def test_decomposed_multichain(smiles, expected):
         ("CCCC(C)C(CC)CCC", "4-ethyl-5-methyloctane"),
         ("CC(C)CCC(CC)CC", "5-ethyl-2-methylheptane"),
         ("CCC=CCC(C)C", "6-methylhept-3-ene"),
-        ("CC=CCC#CC", "hept-2-en-5-yne"),
+        ("CC=CCC#CC", "hept-2-ene-5-yne"),
         ("C(C)(C)C(C)(C)", "2,3-dimethylbutane"),
         ("C(C)(C)C(C)(C)CCC", "2,3,3-trimethylhexane"),
         ("CCCCC(C(C)C(C)C)(C(C)C(C)C)CCCC", "5,5-bis(3-methylbut-2-yl)nonane"),
