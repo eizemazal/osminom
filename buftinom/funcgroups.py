@@ -68,7 +68,9 @@ class GroupMatch:
     tag: FunctionalGroup
     #
     is_symmetric: bool
-    is_flex_root: bool  # can root atom be flexible and connect to the cycle
+    # can root atom be flexible i.e.
+    # When carbon of the functional group could be not the part of the parent chain
+    is_flex_root: bool
     #
     root_flexed: Atom | None = None
 
