@@ -541,13 +541,20 @@ class Alogrythms:
         """
         Scores the chains by the priorities, and filter untill the main chain is selected
         """
-        max_chains = filter_max(chains, partial(self.chain_have_connection, connection))
-        max_chains = filter_max(max_chains, self.chain_count_functional_group)
-        max_chains = filter_max(max_chains, self.chain_cycle)
-        max_chains = filter_max(max_chains, self.chain_length)
-        max_chains = filter_max(max_chains, self.chain_cycle_aromatic)
-        max_chains = filter_max(max_chains, self.chain_bonds)
-        max_chains = filter_max(max_chains, self.chain_outside_connections)
+        max_chains = chains
+        filters = [
+            partial(self.chain_have_connection, connection),
+            self.chain_count_functional_group,
+            self.chain_cycle,
+            self.chain_length,
+            self.chain_cycle_aromatic,
+            self.chain_bonds,
+            self.chain_outside_connections,
+        ]
+
+        for filter in filters:
+            max_chains = filter_max(max_chains, filter)
+
         #
         max_chain = max_chains[0]
         #
@@ -762,6 +769,23 @@ class Alogrythms:
             if atom in chain_atoms
         }
 
+    def flex_groups(self, decomp: MolDecomposition, connection: SubchainConnection):
+        ffg: dict[Atom, list[GroupMatch]] = defaultdict(list)
+
+        if len(decomp.chain) != 1:
+            return ffg
+
+        for fg in decomp.functional_groups.get(decomp.chain[0], []):
+            if fg.is_flex_root:
+                fg.change_root(connection.parent)
+                ffg[connection.parent].append(fg)
+                continue
+
+            ffg = {}
+            break
+
+        return ffg
+
     def decompose(self):
         """
         Crate decomposition of the Molecule
@@ -793,22 +817,9 @@ class Alogrythms:
                 summol_chains = groupped_chains + connectles
                 subdecomp = _decompose(summol_chains, connection)
 
-                if len(subdecomp.chain) == 1:
-                    flex_skip = False
-                    for fg in subdecomp.functional_groups.get(subdecomp.chain[0], []):
-                        if fg.is_flex_root:
-                            fg.change_root(connection.parent)
-                            flex_func_groups[connection.parent].append(fg)
-                            flex_skip = True
-                            continue
-
-                        # if any group is not flex
-                        flex_func_groups = {}
-                        flex_skip = False
-                        break
-
-                    if flex_skip:
-                        continue
+                if ffg := self.flex_groups(subdecomp, connection):
+                    flex_func_groups = deepmerge(flex_func_groups, ffg)
+                    continue
 
                 connections[connection].append(subdecomp)
 
