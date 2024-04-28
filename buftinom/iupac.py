@@ -1,21 +1,16 @@
 from collections import defaultdict
-from dataclasses import dataclass, field
 from functools import cached_property
-from typing import NamedTuple
 
 from buftinom.algorythms import (
     Alogrythms,
-    Chain,
     MolDecomposition,
     SubchainConnection,
-    reversechain,
 )
-from buftinom.funcgroups import GroupMatch
+from buftinom.features import AtomFeatures, Features
 from buftinom.lookup import (
     MULTI_BY_PREFIX,
     MULTI_MULTI_BY_PREFIX,
     ROOT_BY_LENGTH,
-    Alphabet,
     Aromatic,
     Infix,
     Prefix,
@@ -24,75 +19,15 @@ from buftinom.lookup import (
     is_preferred_in_prefix,
     provides_split,
 )
-from buftinom.smileg import Atom, Bond, BondType, Molecule, is_carbon
+from buftinom.models import IupacName, Subn, Synt
+from buftinom.smileg import Atom, BondType, Molecule
 from buftinom.translate import WordForm, WordFormName
-from buftinom.utils import first_max, nonzero_indexes
-
-
-class Synt(NamedTuple):
-    """SYNtax uniT"""
-
-    index: int
-    value: WordForm
-
-    def __str__(self):
-        return f"{self.index}-{self.value}"
-
-    __repr__ = __str__
-
-
-class Subn(NamedTuple):
-    """SUB Name"""
-
-    index: int
-    value: "IupacName"
-
-    def __str__(self):
-        return f"{self.index}-{self.value}"
-
-    __repr__ = __str__
 
 
 def s(obj):
     if not obj:
         return ""
     return str(obj)
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class IupacName:
-    """
-    Structured IUPAC name representation
-    """
-
-    subnames: list["IupacName"]
-    prefixes: list[Subn] = field(default_factory=list)
-    infix: WordForm = None
-    func_preffixes: list[Synt]
-    root_word: WordForm
-    prime_suffixes: list[Synt]
-    sub_suffix: Synt = None
-    func_suffixes: list[Synt]
-    ref: MolDecomposition
-
-    def __repr__(self):
-        sn = s(self.subnames)
-        if sn:
-            sn += " "
-        return sn + "".join(
-            map(
-                s,
-                [
-                    self.prefixes,
-                    self.infix,
-                    self.func_preffixes,
-                    self.root_word,
-                    self.prime_suffixes,
-                    self.sub_suffix,
-                    self.func_suffixes,
-                ],
-            )
-        )
 
 
 def singleidx2str(name: WordForm, idx: int, form: WordFormName):
@@ -248,32 +183,6 @@ def iupac2str(iupac: IupacName) -> str:
     return subnames + "".join(map(s, [preffix, infix, fpreffix, root, suffix]))
 
 
-@dataclass
-class AtomFeatures:
-    chain_index: int
-    atom: Atom
-    bond_ahead: Bond
-    # self atom in this connection is peer
-    connection: SubchainConnection
-    subiupacs: list[IupacName]
-    functional_groups: list[GroupMatch]
-
-
-@dataclass
-class DecFeatures:
-    dec: MolDecomposition
-    fs: list[AtomFeatures]
-
-    connected_scores: list[int] = field(default_factory=list)
-    group_scores: list[int] = field(default_factory=list)
-    bond_scores: list[int] = field(default_factory=list)
-    weak_group_scores: list[int] = field(default_factory=list)
-    subchain_scores: list[int] = field(default_factory=list)
-
-    def as_tuple(self):
-        return self.dec, self.fs
-
-
 class Iupac:
     """
     Build Iupac structured representation of the molecule.
@@ -291,68 +200,9 @@ class Iupac:
     def decomposition(self):
         return self.alg.decompose()
 
-    def features(
-        self, decomp: MolDecomposition, subiupacs: dict[Atom, list[IupacName]]
-    ):
-        """
-        Collect features of the decomposed chain.
-
-        Spectial attention to cycles, their representation contains bonds between the edges of the chain
-        """
-        chain = decomp.chain
-        parent_connection = decomp.connected_by
-
-        if decomp.is_cycle:
-            chain: Chain = decomp.chain + (decomp.chain[0],)
-
-        non_carbons = 0
-        for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
-            if not is_carbon(a1):
-                non_carbons += 1
-                continue
-
-            bond = self.mol.bonds[(a1, a2)]
-
-            parent = None
-            if parent_connection and a1 == parent_connection.peer:
-                parent = decomp.connected_by
-
-            func_groups = decomp.functional_groups.get(a1, [])
-            # if not is_carbon(a2):
-            #     nc_group = decomp.functional_groups.get(a2)
-            #     if func_group is not None and nc_group is not None:
-            #         raise NotImplementedError(f"Multiple func groups on one atom {a1}")
-
-            #     func_group = nc_group
-
-            index = i - non_carbons
-            yield AtomFeatures(
-                chain_index=index,
-                atom=a1,
-                bond_ahead=bond,
-                subiupacs=subiupacs.get(a1),
-                functional_groups=func_groups,
-                connection=parent,
-            )
-
-        # Do not forget the last atom of the chain
-        if decomp.is_cycle:
-            return
-
-        last = chain[-1]
-
-        parent = None
-        if parent_connection and last == parent_connection.peer:
-            parent = decomp.connected_by
-
-        yield AtomFeatures(
-            chain_index=len(chain),
-            atom=last,
-            bond_ahead=None,
-            subiupacs=subiupacs.get(last),
-            functional_groups=decomp.functional_groups.get(last, []),
-            connection=parent,
-        )
+    @cached_property
+    def features(self):
+        return Features(self.mol)
 
     def suffixes_by_features(
         self,
@@ -477,208 +327,6 @@ class Iupac:
 
         return result
 
-    # Begin fpod
-    #
-
-    PRIORITIES = {
-        BondType.SINGLE: 0,
-        "weak-functional-group": 1,
-        BondType.TRIPLE: 2,
-        BondType.DOUBLE: 3,
-        "functional-group": 4,
-    }
-
-    WEAK_FUNCTIONAL_GROUPS = set()
-
-    def feature_connected(self, feature: AtomFeatures):
-        return int(feature.connection is not None)
-
-    def feature_bonds(self, feature: AtomFeatures):
-        if feature.bond_ahead is None:
-            return 0
-        return Iupac.PRIORITIES.get(feature.bond_ahead.type, 0)
-
-    def feature_group(self, feature: AtomFeatures):
-        prio = Iupac.PRIORITIES
-        if not feature.functional_groups:
-            return 0
-
-        score = 0
-
-        for group in feature.functional_groups:
-            group_tag = group.tag.value
-            if group_tag not in Iupac.WEAK_FUNCTIONAL_GROUPS:
-                score = prio.get("functional-group")
-
-        return score
-
-    def feature_weak_group(self, feature: AtomFeatures):
-        prio = Iupac.PRIORITIES
-        if not feature.functional_groups:
-            return 0
-
-        score = 0
-        for group in feature.functional_groups:
-            group_tag = group.tag.value
-            if group_tag in Iupac.WEAK_FUNCTIONAL_GROUPS:
-                score = prio.get("functional-group")
-
-        return score
-
-    def feature_subchain(self, feature: AtomFeatures):
-        alphabetical = 0
-        if feature.subiupacs:
-            for sub in feature.subiupacs:
-                # handle for complex radicals
-                alphabetical = max(alphabetical, ord(sub.root_word.norm[0]))
-
-            alphabetical = -alphabetical + ord(Alphabet.MAX.value.norm)
-        return alphabetical
-
-    def fpod(self, decomp: MolDecomposition, preffixes: dict[Atom, list[IupacName]]):
-        """
-        First Point of Difference
-
-        The algorythm to determine the Numbering of the chain.
-
-        Short rule is:
-        1. Primary functional group is the king, it have the least number
-        2. Double and Triple bonds have second prio
-        3. Weak functional groups next
-        4. Afther that - Subchains.
-        5. Other collisions resolved alphabetically
-
-        We test every possible chain numberings to see which higher priority is matches
-        And select numbering appropriately.
-
-        For the acyclic chain all possibilities are - straight or reversed numbering
-        """
-        if decomp.is_cycle:
-            return self.fpod_cycle(decomp, preffixes)
-
-        straight = decomp
-        reversed = decomp.with_chain(tuple(reversechain(straight.chain)))
-
-        return self._fpod_many(preffixes, [straight, reversed])
-
-    def fpod_cycle(
-        self, decomp: MolDecomposition, preffixes: dict[Atom, list[IupacName]]
-    ):
-        """
-        Cycles is a special case.
-        We first look for any priority features,
-
-        The fpod then is preformed with this feature as the first atom of the chain.
-        And the position wins if in the end it'll have the best priority fit.
-        """
-        features = list(self.features(decomp, preffixes))
-
-        priorities = [
-            self.feature_connected,
-            self.feature_group,
-            self.feature_bonds,
-            self.feature_weak_group,
-            self.feature_subchain,
-            # any
-            lambda x: 1,
-        ]
-
-        starts = []
-        for key_func in priorities:
-            starts = list(nonzero_indexes(features, key_func))
-            if starts:
-                break
-
-        comparable = []
-
-        #                   we are here
-        # < here for backward  |  here for forward >
-        #
-        # test all possible starts in circle
-        chain = decomp.chain + decomp.chain + decomp.chain
-
-        for first_id in starts:
-            curr_idx = len(decomp.chain)
-            start = curr_idx + first_id
-            size = len(decomp.chain)
-
-            fchain = chain[start : start + size]
-            bchain = reversechain(chain[start - size + 1 : start + 1])
-
-            assert len(fchain) == len(bchain)
-
-            comparable.append(decomp.with_chain(fchain))
-            comparable.append(decomp.with_chain(bchain))
-
-        return self._fpod_many(preffixes, comparable)
-
-    def _fpod_many(
-        self, preffixes: dict[Atom, list[IupacName]], decs: list[MolDecomposition]
-    ):
-        """
-        Quite a heavy method, ain't it?
-
-        For each given decomposition, compare features that it provides
-        to select decomposition with the **first point of dfference**
-
-        Example: assume we have CCC=C=C
-        Considering two names pent-1,2-diene / pent-3,4-diene
-        Bond scores will look like:
-        [0, 0, 2, 2] - for CC=C=C
-        [0, 2, 2, 0] - for reversed C=C=CC
-
-        algo will go through the columns of this table and
-        find the first column that will signal that it have score with highest prio
-
-        in the examle it'll find that the best fit is second column second row,
-        and we'll select reversed decomposition.
-        """
-        features = [
-            DecFeatures(dec, list(self.features(dec, preffixes))) for dec in decs
-        ]
-
-        #
-        for decfs in features:
-            decfs.connected_scores = list(map(self.feature_connected, decfs.fs))
-
-        i = first_max([d.connected_scores for d in features])
-        if i is not None:
-            return features[i].as_tuple()
-        #
-        for decfs in features:
-            decfs.group_scores = list(map(self.feature_group, decfs.fs))
-
-        i = first_max([d.group_scores for d in features])
-        if i is not None:
-            return features[i].as_tuple()
-        #
-        for decfs in features:
-            decfs.bond_scores = list(map(self.feature_bonds, decfs.fs))
-
-        i = first_max([d.bond_scores for d in features])
-        if i is not None:
-            return features[i].as_tuple()
-        #
-        for decfs in features:
-            decfs.weak_group_scores = list(map(self.feature_weak_group, decfs.fs))
-
-        i = first_max([d.weak_group_scores for d in features])
-        if i is not None:
-            return features[i].as_tuple()
-        #
-        for decfs in features:
-            decfs.subchain_scores = list(map(self.feature_subchain, decfs.fs))
-
-        i = first_max([d.subchain_scores for d in features])
-        if i is not None:
-            return features[i].as_tuple()
-
-        #
-        return features[0].as_tuple()
-
-    #
-    # End fpod
-
     def root_word(self, decomp: MolDecomposition, features: list[AtomFeatures]):
         if not decomp.is_aromatic:
             return ROOT_BY_LENGTH[len(features)].value
@@ -703,7 +351,7 @@ class Iupac:
         #
         subnames, unordered_preffixes = self.children(decomp)
         #
-        decomp, features = self.fpod(decomp, unordered_preffixes)
+        decomp, features = self.features.fpod(decomp, unordered_preffixes)
 
         preffixes = self.index_preffixes(features, unordered_preffixes)
         func_preffixes = self.functional_preffixes(features)
