@@ -9,9 +9,9 @@ from contextlib import contextmanager
 from dataclasses import field
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, TypedDict, Unpack
+from typing import Literal
 
-type WordFormName = Literal["norm", "short", "sub"]
+type WordFormName = Literal["norm", "short", "sub", "pref"]
 
 
 @lru_cache
@@ -93,6 +93,9 @@ class WordForm:
             forms = {"norm": forms}
         return forms
 
+    def has_form(self, form: WordFormName):
+        return form in self.forms
+
     def get(self, form: WordFormName):
         if form not in self.forms:
             return self.forms.get("norm")
@@ -111,6 +114,10 @@ class WordForm:
     def sub(self):
         return self.get("sub")
 
+    @property
+    def pref(self):
+        return self.get("pref")
+
     def __eq__(self, other):
         return isinstance(other, WordForm) and self.norm == other.norm
 
@@ -126,12 +133,7 @@ class WordForm:
     __repr__ = __str__
 
 
-class FormParams(TypedDict):
-    short: bool
-    sub: bool
-
-
-def translate(key: str, /, **forms: Unpack[FormParams]):
+def translate(key: str):
     """Translate a key to a WordForm object using the current language dictionary from buftinom/translations/"""
     return WordForm(trans_path=key)
 

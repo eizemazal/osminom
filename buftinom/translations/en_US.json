@@ -60,30 +60,61 @@
     "functional-group": {
         "carboxylic-acid": {
             "norm": "oic acid",
-            "sub": "carboxylic acid"
+            "sub": "carboxylic acid",
+            "pref": "carboxy"
         },
         "amide": {
             "norm": "amide",
-            "sub": "carboxamide"
+            "sub": "carboxamide",
+            "perf": "carbamoyl"
         },
         "nitrile": {
             "norm": "nitrile",
-            "sub": "carbonitrile"
+            "sub": "carbonitrile",
+            "pref": "cyano"
         },
         "ester": {
             "norm": "oate",
-            "sub": "carboxylate"
+            "sub": "carboxylate",
+            "pref": "alkoxycarbonyl"
         },
-        "al": "al",
-        "one": "one",
-        "oxy": "oxy",
-        "amino": "amino",
-        "ol": "ol",
-        "thiol": "thiol",
-        "amine": "amine",
-        "imine": "imine",
-        "brom": "brom",
-        "chlor": "chlor"
+        "al": {
+            "norm": "al",
+            "pref": "oxo"
+        },
+        "one": {
+            "norm": "one",
+            "pref": "oxo"
+        },
+        "oxy": {
+            "norm": "oxy"
+        },
+        "amino": {
+            "norm": "amino",
+            "pref": "oxo"
+        },
+        "ol": {
+            "norm": "ol",
+            "pref": "hydroxy"
+        },
+        "thiol": {
+            "norm": "thiol",
+            "pref": "mercapto"
+        },
+        "amine": {
+            "norm": "amine",
+            "pref": "amino"
+        },
+        "imine": {
+            "norm": "imine",
+            "pref": "imino"
+        },
+        "brom": {
+            "norm": "brom"
+        },
+        "chlor": {
+            "norm": "chlor"
+        }
     },
     "prefix": {
         "yl": "yl",

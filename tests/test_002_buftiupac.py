@@ -159,6 +159,23 @@ def test_aromatic(smiles, expected):
 @pytest.mark.parametrize(
     "smiles,expected",
     [
+        # Base molecule, others will be derived from it
+        ("CCCCCCCCCCO", "decanol"),
+        ("CCCC(C(=O)(O))CCCCCCO", "7-carboxymethyldecanol"),
+    ],
+)
+def test_groups_as_preffixes(smiles, expected):
+    """Suffix
+    When carbon of the functional group is part of the parent chain
+
+    Prefix else
+    """
+    assert get_name(smiles) == expected
+
+
+@pytest.mark.parametrize(
+    "smiles,expected",
+    [
         #
         ("CO", "methanol"),
         ("C(=O)O", "methanoic acid"),
@@ -174,6 +191,7 @@ def test_aromatic(smiles, expected):
         ("C1CC1=C", "1-methylidenecyclopropane"),
         ("CC(=O)NC", "1-methaminoethanone"),
         ("CC(=O)OC", "methyl ethanoate"),
+        ("C(=O)OCCOC(=O)C", ""),
     ],
 )
 def test_more_namings(smiles, expected):
@@ -197,7 +215,7 @@ def test_splitted_by_func_group_molecules(smiles, expected):
     "smiles,expected",
     [
         ("CCC=O", "propanal"),
-        ("C(=O)CC", "propanone"),
+        ("CC(=O)CC", "butan-2-one"),
     ],
 )
 def test_ketonealdehyde(smiles, expected):
@@ -225,7 +243,7 @@ def test_many_func_groups(smiles, expected):
         ("C(Cl)C(Cl)C", "1,2-dichlorpropane"),
     ],
 )
-def test_many_func_groups(smiles, expected):
+def test_chlor_groups(smiles, expected):
     assert get_name(smiles) == expected
 
 

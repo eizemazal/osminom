@@ -29,23 +29,23 @@ class RootWord(Enum):
 
 class PrimarySuffix(Enum):
     # all C-C bonds
-    ANE = _("psuffix.ane", short=True)
+    ANE = _("psuffix.ane")
     # one C=C
-    ENE = _("psuffix.ene", short=True)
+    ENE = _("psuffix.ene")
     # two C=C
-    DIENE = _("psuffix.diene", short=True)
+    DIENE = _("psuffix.diene")
     # one C≡C
-    YNE = _("psuffix.yne", short=True)
+    YNE = _("psuffix.yne")
     # two C≡C
-    DIYNE = _("psuffix.diyne", short=True)
+    DIYNE = _("psuffix.diyne")
     # one C=C & one C≡C
-    ENYNE = _("psuffix.enyne", short=True)
+    ENYNE = _("psuffix.enyne")
 
 
 class FunctionalGroup(Enum):
-    CARBOXYLIC_ACID = _("functional-group.carboxylic-acid", sub=True)
-    AMIDE = _("functional-group.amide", sub=True)
-    NITRILE = _("functional-group.nitrile", sub=True)
+    CARBOXYLIC_ACID = _("functional-group.carboxylic-acid")
+    AMIDE = _("functional-group.amide")
+    NITRILE = _("functional-group.nitrile")
     ALDEHYDE = _("functional-group.al")
     KETONE = _("functional-group.one")
     OXY = _("functional-group.oxy")
@@ -54,7 +54,7 @@ class FunctionalGroup(Enum):
     THIOL = _("functional-group.thiol")
     AMINE = _("functional-group.amine")
     IMINE = _("functional-group.imine")
-    ESTER = _("functional-group.ester", sub=True)
+    ESTER = _("functional-group.ester")
     BROM = _("functional-group.brom")
     CHLOR = _("functional-group.chlor")
 
@@ -66,7 +66,7 @@ class Infix(Enum):
 
 
 class Aromatic(Enum):
-    BENZ = _("aromatic.benzene", sub=True)
+    BENZ = _("aromatic.benzene")
 
 
 class Prefix(Enum):
