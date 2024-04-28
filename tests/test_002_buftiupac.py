@@ -199,6 +199,9 @@ def test_groups_as_preffixes(smiles, expected):
         ("C(=O)OCCOC(=O)C", ""),
         ("OC(=O)CC(C(=O))C(=O)O", "2-formylbutane-1,4-dioic acid"),
         ("C1CCCCC1=O", "cyclohexanone"),
+        ("c1ccncc1", "pyridine"),
+        ("c1ccncc(O)1", "pyrid-3-ol"),
+        ("c1ccnc(N)c1", "2-aminopyridine"),
     ],
 )
 def test_more_namings(smiles, expected):

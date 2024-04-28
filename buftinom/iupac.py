@@ -1,4 +1,4 @@
-from collections import defaultdict, deque
+from collections import Counter, defaultdict, deque
 from functools import cached_property
 
 from buftinom.algorythms import (
@@ -400,12 +400,20 @@ class Iupac:
         if not decomp.is_aromatic:
             return ROOT_BY_LENGTH[len(features)].value
 
-        if len(decomp.chain) == 6:
+        if len(decomp.chain) != 6:
+            raise NotImplementedError(
+                f"Aromatic ring with lengh {len(decomp.chain)} is not supported"
+            )
+
+        counter = Counter([a.symbol.lower() for a in decomp.chain])
+
+        if counter["c"] == 5 and counter["n"] == 1:
+            return Aromatic.PYRIDINE.value
+
+        if counter["c"] == 6:
             return Aromatic.BENZ.value
 
-        raise NotImplementedError(
-            f"Aromatic ring with lengh {len(decomp.chain)} is not supported"
-        )
+        raise NotImplementedError(f"Unsupported aromatic cycle {decomp.chain}")
 
     def infix(self, decomp: MolDecomposition, features: list[AtomFeatures]):
         if decomp.is_aromatic or not decomp.is_cycle:

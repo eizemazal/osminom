@@ -40,6 +40,10 @@ def feature_connected(feature: AtomFeatures):
     return int(feature.connection is not None)
 
 
+def feature_noncarbon(feature: AtomFeatures):
+    return int(not is_carbon(feature.atom))
+
+
 def feature_bonds(feature: AtomFeatures):
     if feature.bond_ahead is None:
         return 0
@@ -132,7 +136,7 @@ class Features:
 
         non_carbons = 0
         for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
-            if not is_carbon(a1):
+            if not is_carbon(a1) and not decomp.is_aromatic:
                 non_carbons += 1
                 continue
 
@@ -219,6 +223,7 @@ class Features:
 
         priorities = [
             feature_connected,
+            feature_noncarbon,
             feature_group,
             feature_bonds,
             feature_weak_group,

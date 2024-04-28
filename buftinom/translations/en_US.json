@@ -29,6 +29,10 @@
         "benzene": {
             "norm": "benzene",
             "sub": "phen"
+        },
+        "pyridine": {
+            "norm": "pyridine",
+            "sub": "pyrid"
         }
     },
     "psuffix": {

@@ -68,6 +68,7 @@ class Infix(Enum):
 
 class Aromatic(Enum):
     BENZ = _("aromatic.benzene")
+    PYRIDINE = _("aromatic.pyridine")
 
 
 class Prefix(Enum):
