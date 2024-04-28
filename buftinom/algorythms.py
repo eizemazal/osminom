@@ -805,7 +805,8 @@ class Alogrythms:
         if atoms != mol_atoms:
             raise ValueError(
                 "Cannot figure molecule structure. "
-                + "Molecule, is invalid or, more likely, not supported 🫡"
+                + f"Unable to connect {mol_atoms - atoms} to the chain."
+                + "\nMolecule, is invalid or, more likely, not supported 🫡"
             )
 
     def decompose(self):
