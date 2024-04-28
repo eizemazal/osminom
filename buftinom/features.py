@@ -8,7 +8,7 @@ from buftinom.algorythms import (
     reversechain,
 )
 from buftinom.funcgroups import GroupMatch
-from buftinom.lookup import Alphabet
+from buftinom.lookup import Alphabet, FunctionalGroup
 from buftinom.models import IupacName
 from buftinom.smileg import Atom, Bond, BondType, is_carbon
 from buftinom.utils import first_max, nonzero_indexes
@@ -54,7 +54,7 @@ def feature_group(feature: AtomFeatures):
     score = 0
 
     for group in feature.functional_groups:
-        group_tag = group.tag.value
+        group_tag = group.tag
         if group_tag not in Features.WEAK_FUNCTIONAL_GROUPS:
             score = prio.get("functional-group")
 
@@ -68,7 +68,7 @@ def feature_weak_group(feature: AtomFeatures):
 
     score = 0
     for group in feature.functional_groups:
-        group_tag = group.tag.value
+        group_tag = group.tag
         if group_tag in Features.WEAK_FUNCTIONAL_GROUPS:
             score = prio.get("functional-group")
 
@@ -104,7 +104,14 @@ class Features:
         "functional-group": 4,
     }
 
-    WEAK_FUNCTIONAL_GROUPS = set()
+    WEAK_FUNCTIONAL_GROUPS = {
+        FunctionalGroup.OXY,
+        FunctionalGroup.AMINO,
+        FunctionalGroup.ESTER,
+        FunctionalGroup.BROM,
+        FunctionalGroup.CHLOR,
+        FunctionalGroup.NITRO,
+    }
 
     def __init__(self, mol: MolDecomposition):
         self.mol = mol

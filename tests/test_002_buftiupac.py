@@ -205,6 +205,7 @@ def test_more_namings(smiles, expected):
         ("CCCNCCC", "1-propaminopropane"),
         ("CCCNCCCNCCC", "1,3-dipropaminopropane"),
         ("CCCCNCCCNCCC", "1-(3-propaminopropamino)butane"),
+        ("OCCOCCO", "2-(2-hydroxyethoxy)ethanol"),
     ],
 )
 def test_splitted_by_func_group_molecules(smiles, expected):
@@ -241,9 +242,10 @@ def test_many_func_groups(smiles, expected):
         ("CCCCl", "chlorpropane"),
         ("CC(Cl)C", "2-chlorpropane"),
         ("C(Cl)C(Cl)C", "1,2-dichlorpropane"),
+        ("CCC[N+](=O)[O-]", "nitropropane"),
     ],
 )
-def test_chlor_groups(smiles, expected):
+def test_halo_groups(smiles, expected):
     assert get_name(smiles) == expected
 
 

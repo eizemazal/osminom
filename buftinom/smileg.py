@@ -21,7 +21,7 @@ def is_not_carbon(a: "Atom"):
 
 
 def s(val, template):
-    if val is None:
+    if not val:
         return ""
 
     return template % val

@@ -31,7 +31,9 @@ def _assert_auto(mol: Molecule, atom: Atom):
     if actual_valence > expected:
         raise ValueError(
             f"Atom {atom} have valence {actual_valence},"
-            + f" expected to have no more than {expected}"
+            + f" expected to have no more than {expected}."
+            + "Use custom atom parameters to specify expected atom state: \n"
+            + f">>> [{atom.symbol}{actual_valence - expected:+}] "
         )
 
     # Calculate missing atom characteristics

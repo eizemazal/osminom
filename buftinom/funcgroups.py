@@ -12,6 +12,7 @@ class AtomParams(TypedDict):
     by: NotRequired[BondSymbol]
     symbol: str
     hydrogen: int
+    charge: int
 
     #
     is_root: NotRequired[bool]
@@ -32,8 +33,9 @@ class GroupParams(TypedDict):
 def structcmp(a1: Atom, a2: AtomParams):
     sym_eq = a1.symbol.lower() == a2["symbol"].lower()
     h_eq = a1.hydrogen == a2.get("hydrogen", a1.hydrogen)
+    charge_eq = a1.charge == a2.get("charge", a1.charge)
 
-    return sym_eq and h_eq
+    return sym_eq and h_eq and charge_eq
 
 
 def find(
@@ -182,7 +184,7 @@ class MatcherBuilder:
         self.mol = mol
         self.tag = tag
 
-    def chain(self, *matchers: Matcher, **group_params: Unpack[GroupParams]):
+    def chain(self, *matchers: Matcher, **group_params: Unpack[GroupParams]) -> Matcher:
         m1, *ms = matchers
         root = m1
 
@@ -328,6 +330,19 @@ def chlor_matcher(mol: Molecule):
     )
 
 
+def nitro_matcher(mol: Molecule):
+    """R-N(=O)O"""
+    match = MatcherBuilder(mol, FunctionalGroup.NITRO)
+
+    return match.chain(
+        match.atom(symbol="O", is_terminal=True),
+        match.atom(by="=", symbol="N", charge=+1).branch(
+            match.atom(by="-", symbol="O", is_terminal=True, charge=-1),
+            match.atom(by="-", symbol="C", is_root=True),
+        ),
+    )
+
+
 def ester_matcher(mol: Molecule):
     """O=C-O-C aka RCOOR"""
     match = MatcherBuilder(mol, FunctionalGroup.ESTER)
@@ -351,6 +366,7 @@ def get_matchers(molecule: Molecule):
         ester_matcher,
         acid_amide_matcher,
         acid_matcher,
+        nitro_matcher,
         oxy_matcher,
         amino_matcher,
         alco_matcher,

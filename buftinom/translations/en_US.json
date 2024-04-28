@@ -110,10 +110,16 @@
             "pref": "imino"
         },
         "brom": {
-            "norm": "brom"
+            "norm": "brom",
+            "pref": "brom"
         },
         "chlor": {
-            "norm": "chlor"
+            "norm": "chlor",
+            "pref": "chlor"
+        },
+        "nitro": {
+            "norm": "nitro",
+            "pref": "nitro"
         }
     },
     "prefix": {

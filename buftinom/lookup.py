@@ -57,6 +57,7 @@ class FunctionalGroup(Enum):
     ESTER = _("functional-group.ester")
     BROM = _("functional-group.brom")
     CHLOR = _("functional-group.chlor")
+    NITRO = _("functional-group.nitro")
 
 
 class Infix(Enum):
@@ -149,6 +150,7 @@ MULTI_MULTI_BY_PREFIX = {
 PREFFERED_AS_PREFFIXES = {
     FunctionalGroup.BROM,
     FunctionalGroup.CHLOR,
+    FunctionalGroup.NITRO,
 }
 
 
