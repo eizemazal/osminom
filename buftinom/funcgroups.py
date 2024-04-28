@@ -28,6 +28,7 @@ class GroupParams(TypedDict):
     """
 
     is_symmetric: NotRequired[bool]
+    is_flex_root: NotRequired[bool]
 
 
 def structcmp(a1: Atom, a2: AtomParams):
@@ -59,7 +60,7 @@ def find(
             return a
 
 
-@dataclass(frozen=True, eq=True)
+@dataclass(eq=True)
 class GroupMatch:
     root: Atom | None
     side_root: Atom | None
@@ -67,10 +68,19 @@ class GroupMatch:
     tag: FunctionalGroup
     #
     is_symmetric: bool
+    is_flex_root: bool  # can root atom be flexible and connect to the cycle
+    #
+    root_flexed: Atom | None = None
 
     @cached_property
     def func_atoms(self) -> set[Atom]:
         return set(filter(is_not_carbon, self.atoms))
+
+    def change_root(self, new_root: Atom):
+        if self.root_flexed is not None:
+            raise ValueError("Root can only be changed once")
+        self.root_flexed = self.root
+        self.root = new_root
 
     def __str__(self):
         return f"group({self.atoms}, {self.tag.name})"
@@ -171,6 +181,7 @@ class Matcher:
             atoms=atoms,
             tag=self.tag,
             is_symmetric=self.group_params.get("is_symmetric", False),
+            is_flex_root=self.group_params.get("is_flex_root", False),
         )
 
 
@@ -222,6 +233,7 @@ def acid_matcher(mol: Molecule):
         match.atom(symbol="O", is_terminal=True),
         match.atom(by="=", symbol="C", is_root=True),
         match.atom(by="-", symbol="O", is_terminal=True),
+        is_flex_root=True,
     )
 
 
@@ -242,6 +254,7 @@ def imine_matcher(mol: Molecule):
     return match.chain(
         match.atom(symbol="N", is_terminal=True),
         match.atom(by="=", symbol="C", is_root=True),
+        is_flex_root=True,
     )
 
 
@@ -252,6 +265,7 @@ def nitrile_matcher(mol: Molecule):
     return match.chain(
         match.atom(symbol="N", is_terminal=True),
         match.atom(by="#", symbol="C", is_root=True),
+        is_flex_root=True,
     )
 
 
@@ -263,6 +277,7 @@ def acid_amide_matcher(mol: Molecule):
         match.atom(symbol="O", is_terminal=True),
         match.atom(by="=", symbol="C", is_root=True),
         match.atom(by="-", symbol="N", is_terminal=True),
+        is_flex_root=True,
     )
 
 
@@ -307,6 +322,7 @@ def aldehyde_matcher(mol: Molecule):
     return match.chain(
         match.atom(symbol="O", is_terminal=True),
         match.atom(by="=", symbol="C", hydrogen=1, is_root=True),
+        is_flex_root=True,
     )
 
 

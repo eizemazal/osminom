@@ -7,13 +7,13 @@ from buftinom.algorythms import (
     SubchainConnection,
 )
 from buftinom.features import AtomFeatures, Features
+from buftinom.funcgroups import GroupMatch
 from buftinom.lookup import (
     MULTI_BY_PREFIX,
     MULTI_MULTI_BY_PREFIX,
     ROOT_BY_LENGTH,
     UNIQUE_SUBSUFFIX,
     Aromatic,
-    FunctionalGroup,
     Infix,
     Prefix,
     PrimarySuffix,
@@ -310,17 +310,14 @@ class Iupac:
         )
 
     def preffered_in_preffix(
-        self,
-        group: FunctionalGroup,
-        *,
-        primary: bool,
-        is_aromatic: bool,
+        self, group: GroupMatch, *, primary: bool, decomp: MolDecomposition
     ):
-        always = is_always_preferred_as_prefix(group)
-        in_subchain = not primary and is_preferred_as_prefix_in_subchain(group)
-        aromatic = is_aromatic and is_preffix_in_arimatic(group)
+        always = is_always_preferred_as_prefix(group.tag)
+        in_subchain = not primary and is_preferred_as_prefix_in_subchain(group.tag)
+        aromatic = decomp.is_aromatic and is_preffix_in_arimatic(group.tag)
+        flat_flexed = not decomp.is_cycle and group.root_flexed
 
-        return always or in_subchain or aromatic
+        return always or in_subchain or aromatic or flat_flexed
 
     def functional_preffixes(
         self,
@@ -339,9 +336,7 @@ class Iupac:
                 if is_preferred_in_subprefix(group.tag):
                     continue
 
-                if self.preffered_in_preffix(
-                    group.tag, primary=primary, is_aromatic=decomp.is_aromatic
-                ):
+                if self.preffered_in_preffix(group, primary=primary, decomp=decomp):
                     result.append(Synt(feature.chain_index, group.tag.value))
 
         return result
@@ -356,18 +351,16 @@ class Iupac:
         """
         Collect all functional suffixed of the chain based on the functional groups it have
         """
-        result = []
+        main = []
         for f in features:
             for group in f.functional_groups:
                 if is_preferred_in_subprefix(group.tag):
                     continue
 
-                if not self.preffered_in_preffix(
-                    group.tag, primary=primary, is_aromatic=decomp.is_aromatic
-                ):
-                    result.append(Synt(f.chain_index, group.tag.value))
+                if not self.preffered_in_preffix(group, primary=primary, decomp=decomp):
+                    main.append(Synt(f.chain_index, group.tag.value))
 
-        return result
+        return main
 
     def children(self, dec: MolDecomposition):
         """

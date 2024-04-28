@@ -125,7 +125,7 @@ def test_cycle_names(smiles, expected):
         ("C1CCC(O)CC1", "cyclohexanol"),
         ("C1CCCCC1C2CCCC2", "1-cyclopentylcyclohexane"),
         ("C1CCCCC1CC2CCCC2", "1-(1-cyclopentylmethyl)cyclohexane"),
-        ("CCCC(C(=O)O)CCC(=O)O", "4-carboxymethylheptanoic acid"),
+        ("CCCC(C(=O)O)CCC(=O)O", "4-carboxyheptanoic acid"),
         ("CCCC(CO)CCC(=O)O", "4-hydroxymethylheptanoic acid"),
         ("C=N", "methanimine"),
         ("C#N", "methannitrile"),
@@ -161,7 +161,7 @@ def test_aromatic(smiles, expected):
     [
         # Base molecule, others will be derived from it
         ("CCCCCCCCCCO", "decanol"),
-        ("CCCC(C(=O)(O))CCCCCCO", "7-carboxymethyldecanol"),
+        ("CCCC(C(=O)(O))CCCCCCO", "7-carboxydecanol"),
     ],
 )
 def test_groups_as_preffixes(smiles, expected):
@@ -194,7 +194,11 @@ def test_groups_as_preffixes(smiles, expected):
         ("NCCN", "ethane-1,2-diamine"),
         ("c1ccccc1N", "aminobenzene"),
         ("C1CCCCC1N", "cyclohexanamine"),
+        ("C1CCCC(=O)CC(C#N)CCC1", "cyclodecanenitrile-3-one"),
+        ("C1CC(C(=O)O)CCC1", "cyclohexanoic acid"),
         ("C(=O)OCCOC(=O)C", ""),
+        ("OC(=O)CC(C(=O))C(=O)O", "2-formylbutane-1,4-dioic acid"),
+        ("C1CCCCC1=O", "cyclohexanone"),
     ],
 )
 def test_more_namings(smiles, expected):

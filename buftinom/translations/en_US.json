@@ -80,7 +80,8 @@
         },
         "al": {
             "norm": "al",
-            "pref": "oxo"
+            "sub": "carbaldehyde",
+            "pref": "formyl"
         },
         "one": {
             "norm": "one",

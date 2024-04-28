@@ -90,3 +90,13 @@ def first_max(iterables: list[list[int]]):
             return maxrow
 
         row_indexes = set(rows)
+
+
+def deepmerge(a: dict[Any, list], b: dict[Any, list]):
+    for k, v in b.items():
+        if k in a:
+            a[k].extend(v)
+        else:
+            a[k] = v
+
+    return a

@@ -9,7 +9,7 @@ from buftinom.lookup import (
     BOND_PRIORITY,
 )
 from buftinom.smileg import Atom, BondType, Molecule, is_carbon
-from buftinom.utils import filter_max
+from buftinom.utils import deepmerge, filter_max
 
 ChainKey: TypeAlias = tuple[Atom, Atom]
 Chain: TypeAlias = tuple[Atom, ...]
@@ -143,13 +143,15 @@ class Alogrythms:
             if len(available_conns) <= 1:
                 leafs.append(atom)
 
-        # Take one point from the cycle
-        # so we can track chained connections from the to and the cycles
-        # and between-the-circle chains
-        # for cycle in cycles:
-        #     leafs.append(cycle[0])
-
         return leafs
+
+    def on_cycle_border(self, atom: Atom):
+        if atom in self.cycle_atoms:
+            return {atom}
+
+        if not atom:
+            return set()
+        return self.mol.adj_set[atom] & self.cycle_atoms
 
     @cached_property
     def functional_groups(self):
@@ -173,10 +175,21 @@ class Alogrythms:
 
                 match_atom_used = mtch.func_atoms & group_atoms
 
-                if not match_atom_used:
-                    groups[mtch.root].append(mtch)
-                    if not mtch.is_symmetric:
-                        group_atoms |= mtch.func_atoms
+                if match_atom_used:
+                    continue
+
+                if is_carbon(mtch.root) and mtch.is_flex_root:
+                    if croot := self.on_cycle_border(mtch.root):
+                        if len(croot) != 1:
+                            raise NotImplementedError(
+                                f"Atom {mtch.root} have too much connections with the cycle {croot}"
+                            )
+                        group_atoms |= {mtch.root}
+                        mtch.change_root(croot.pop())
+
+                groups[mtch.root].append(mtch)
+                if not mtch.is_symmetric:
+                    group_atoms |= mtch.func_atoms
 
         return groups
 
@@ -191,6 +204,9 @@ class Alogrythms:
         for func_groups in self.functional_groups.values():
             for group in func_groups:
                 atoms |= group.func_atoms
+
+                if group.root_flexed:
+                    atoms |= {group.root_flexed}
 
         nonfunc_atoms = set(self.mol.atoms) - atoms
         noncarbon_func = list(filter(lambda a: not is_carbon(a), nonfunc_atoms))
@@ -769,13 +785,36 @@ class Alogrythms:
             chain_groups = self.group_by_components(subchains, components)
             groups, connectles = self.group_connections(chain_groups, max_chain)
 
+            flex_func_groups: dict[Atom, list[GroupMatch]] = defaultdict(list)
+
             for connection, groupped_chains in groups:
                 # Add all the chains without connections, to test
                 # if they are connected to current subgroup
                 summol_chains = groupped_chains + connectles
-                connections[connection].append(_decompose(summol_chains, connection))
+                subdecomp = _decompose(summol_chains, connection)
+
+                if len(subdecomp.chain) == 1:
+                    flex_skip = False
+                    for fg in subdecomp.functional_groups.get(subdecomp.chain[0], []):
+                        if fg.is_flex_root:
+                            fg.change_root(connection.parent)
+                            flex_func_groups[connection.parent].append(fg)
+                            flex_skip = True
+                            continue
+
+                        # if any group is not flex
+                        flex_func_groups = {}
+                        flex_skip = False
+                        break
+
+                    if flex_skip:
+                        continue
+
+                connections[connection].append(subdecomp)
 
             func_groups = self.chain_functional_groups(max_chain)
+            func_groups = deepmerge(func_groups, flex_func_groups)
+
             is_cycle = self.chain_cycle(max_chain)
             is_aromatic = is_cycle and self.is_aromatic(max_chain)
 
