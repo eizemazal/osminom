@@ -201,6 +201,7 @@ def test_groups_as_preffixes(smiles, expected):
         ("c1ccncc1", "pyridine"),
         ("c1ccncc(O)1", "pyrid-3-ol"),
         ("c1ccnc(N)c1", "2-aminopyridine"),
+        ("c1ccccc1C(=O)N", "phenylamide"),
     ],
 )
 def test_more_namings(smiles, expected):

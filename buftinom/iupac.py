@@ -6,7 +6,7 @@ from buftinom.algorythms import (
     MolDecomposition,
     SubchainConnection,
 )
-from buftinom.features import AtomFeatures, Features
+from buftinom.features import AtomFeatures, Features, f2c
 from buftinom.funcgroups import GroupMatch
 from buftinom.lookup import (
     MULTI_BY_PREFIX,
@@ -268,6 +268,23 @@ class Iupac:
 
         return result
 
+    def ring_subsuffixes(self, features: list[AtomFeatures]):
+        if not self.alg.is_aromatic(f2c(features)):
+            return None
+
+        for feature in features:
+            if not feature.functional_groups:
+                continue
+
+            groups = feature.functional_groups
+
+            if not groups:
+                continue
+
+            for group in groups:
+                if group.root_flexed:
+                    return [Synt(feature.chain_index, Prefix.YL.value)]
+
     def subsuffixes(
         self,
         features: list[AtomFeatures],
@@ -276,7 +293,7 @@ class Iupac:
         primary: bool,
     ):
         if primary:
-            return None
+            return self.ring_subsuffixes(features)
 
         res = deque([])
 

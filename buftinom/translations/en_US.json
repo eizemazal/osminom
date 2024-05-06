@@ -69,12 +69,12 @@
         },
         "amide": {
             "norm": "amide",
-            "sub": "carboxamide",
+            "sub": "amide",
             "perf": "carbamoyl"
         },
         "nitrile": {
             "norm": "nitrile",
-            "sub": "carbonitrile",
+            "sub": "notrile",
             "pref": "cyano"
         },
         "ester": {

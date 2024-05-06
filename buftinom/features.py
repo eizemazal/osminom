@@ -25,6 +25,10 @@ class AtomFeatures:
     functional_groups: list[GroupMatch]
 
 
+def f2c(features: list[AtomFeatures]) -> Chain:
+    return tuple(f.atom for f in features)
+
+
 @dataclass
 class DecFeatures:
     dec: MolDecomposition
