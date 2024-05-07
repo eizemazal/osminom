@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import pytest
 
 from buftinom.algorythms import Alogrythms
+from buftinom.iupac import Iupac, iupac2str
 from buftinom.smileg import Bond, BondType, MoleculeConstructor
 from buftinom.smiles_lexer import SmilesLexer
 from buftinom.smiles_parser import SmilesParser
@@ -234,10 +235,26 @@ def test_assert_invalid_cycles(parser, smiles):
 
 @pytest.mark.parametrize(
     "smiles",
-    ["C(=O)OCCOC(=O)C", "C(=O)OCCCOC=O"],
+    [
+        "C(=O)OCCOC(=O)C",
+        "C(=O)OCCCOC=O",
+    ],
 )
 def test_assert_invalid_connections(parser, smiles):
     with pytest.raises(ValueError):
         (mol,) = parser.parse(smiles)
         d = Alogrythms(mol).decompose()
         d.print()
+
+
+@pytest.mark.parametrize(
+    "smiles",
+    [
+        "C1CCCCOCCC1",
+        "C1CCCCNCCC1",
+    ],
+)
+def test_unsupported_hetero_cycles(parser, smiles):
+    with pytest.raises(NotImplementedError):
+        (mol,) = parser.parse(smiles)
+        print(iupac2str(Iupac(mol).construct_name()))

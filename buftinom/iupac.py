@@ -24,7 +24,7 @@ from buftinom.lookup import (
     provides_split,
 )
 from buftinom.models import IupacName, Subn, Synt
-from buftinom.smileg import Atom, BondType, Molecule
+from buftinom.smileg import Atom, BondType, Molecule, is_carbon
 from buftinom.translate import WordForm, WordFormName
 
 
@@ -413,10 +413,7 @@ class Iupac:
                     result.append(Subn(feature.chain_index, preffix))
         return result
 
-    def root_word(self, decomp: MolDecomposition, features: list[AtomFeatures]):
-        if not decomp.is_aromatic:
-            return ROOT_BY_LENGTH[len(features)].value
-
+    def aromatic_root(self, decomp: MolDecomposition):
         if len(decomp.chain) != 6:
             raise NotImplementedError(
                 f"Aromatic ring with lengh {len(decomp.chain)} is not supported"
@@ -431,6 +428,16 @@ class Iupac:
             return Aromatic.BENZ.value
 
         raise NotImplementedError(f"Unsupported aromatic cycle {decomp.chain}")
+
+    def root_word(self, decomp: MolDecomposition, features: list[AtomFeatures]):
+        if decomp.is_aromatic:
+            return self.aromatic_root(decomp)
+
+        if decomp.is_cycle:
+            if not all(is_carbon(a) for a in decomp.chain):
+                raise NotImplementedError("Hetero cycles are not supported")
+
+        return ROOT_BY_LENGTH[len(features)].value
 
     def infix(self, decomp: MolDecomposition, features: list[AtomFeatures]):
         if decomp.is_aromatic or not decomp.is_cycle:
