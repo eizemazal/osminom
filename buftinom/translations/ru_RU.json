@@ -1,0 +1,109 @@
+{
+    "alphabet": {
+        "min": "А",
+        "max": "я"
+    },
+    "root": {
+        "meth": "мет",
+        "eth": "эт",
+        "prop": "проп",
+        "but": "бут",
+        "pent": "пент",
+        "hex": "гекс",
+        "hept": "гепт",
+        "oct": "окт",
+        "non": "нон",
+        "dec": "дек",
+        "undec": "ундек",
+        "dodec": "додек",
+        "tridec": "тридек",
+        "tetradec": "тетрадек",
+        "pentadec": "пентадек",
+        "hexadec": "гексадек",
+        "heptadec": "гептадек",
+        "octadec": "октадек",
+        "nonadec": "нондек",
+        "icos": "икос"
+    },
+    "aromatic": {
+        "benzene": {
+            "norm": "бензен",
+            "sub": "фен"
+        }
+    },
+    "psuffix": {
+        "ane": {
+            "norm": "ан",
+            "short": "ан"
+        },
+        "ene": {
+            "norm": "ен",
+            "short": "ен"
+        },
+        "diene": {
+            "norm": "дике",
+            "short": "диен"
+        },
+        "yne": {
+            "norm": "ин",
+            "short": "ин"
+        },
+        "diyne": {
+            "norm": "диин",
+            "short": "диин"
+        },
+        "enyne": {
+            "norm": "енин",
+            "short": "енин"
+        }
+    },
+    "functional-group": {
+        "carboxylic-acid": {
+            "norm": "овая кислота",
+            "sub": "карбоксиловая кислота"
+        },
+        "amide": {
+            "norm": "амид",
+            "sub": "карбоксиамид"
+        },
+        "nitrile": {
+            "norm": "нитрил",
+            "sub": "карбоксинитрил"
+        },
+        "ester": {
+            "norm": "оат",
+            "sub": "карбоксилат"
+        },
+        "al": "ал",
+        "one": "он",
+        "oxy": "окси",
+        "amino": "амино",
+        "ol": "ол",
+        "thiol": "тиол",
+        "amine": "амин",
+        "imine": "имин",
+        "brom": "бром",
+        "chlor": "хлор"
+    },
+    "prefix": {
+        "yl": "ил",
+        "ylidene": "илиден",
+        "ylidyne": "илидин"
+    },
+    "multiplying": {
+        "di": "ди",
+        "tri": "три",
+        "tetra": "тетра",
+        "penta": "пента",
+        "bis": "бис",
+        "tris": "трис",
+        "tetrakis": "тетракис",
+        "pentakis": "пентакис"
+    },
+    "infix": {
+        "cyclo": "цикло",
+        "spiro": "спиро",
+        "bicyclo": "бицикло"
+    },
+    "empty": ""
+}
