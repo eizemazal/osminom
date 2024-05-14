@@ -1,15 +1,15 @@
 import pytest
 
-from buftinom.iupac import Iupac, iupac2str
-from buftinom.smileg import debug_atoms
-from buftinom.smiles_parser import SmilesParser
-from buftinom.translate import override_lang
+from osminom.structure2name.iupac import Iupac, iupac2str
+from osminom.structure2name.molecule import debug_atoms
+from osminom.structure2name.molecule import Molecule
+from osminom.structure2name.translate import override_lang
 
 debug_atoms(True)
 
 
 def get_name(smiles):
-    (mol,) = SmilesParser(debug=True).parse(smiles)
+    mol = Molecule.from_smiles(smiles)
     iupac = Iupac(mol)
 
     mol.print_table()
@@ -272,3 +272,16 @@ def test_translate(smiles, en, ru):
 
     with override_lang("ru_RU"):
         assert get_name(smiles) == ru
+
+
+@pytest.mark.parametrize(
+    "smiles",
+    [
+        "C1CCCCOCCC1",
+        "C1CCCCNCCC1",
+    ],
+)
+def test_unsupported_hetero_cycles(smiles):
+    with pytest.raises(NotImplementedError):
+        mol = Molecule.from_smiles(smiles)
+        print(iupac2str(Iupac(mol).construct_name()))

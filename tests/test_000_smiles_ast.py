@@ -1,6 +1,6 @@
-from osminom.ast import Ast, AstNode
-from osminom.atom import Atom
-from osminom.smiles_parser import SmilesParser as SP
+from osminom.common.ast import Ast, AstNode
+from osminom.common.atom import Atom
+from osminom.common.smiles_parser import SmilesParser as SP
 
 # import pytest
 

@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import Iterator
 from dataclasses import dataclass, field
-from osminom.atom import Atom
+from osminom.common.atom import Atom
 from copy import deepcopy
+
 
 @dataclass
 class AstNode:
@@ -43,6 +44,9 @@ class AstNode:
             for r in self._parent.traverse_up():
                 yield r
 
+    def accumulate(self, fn: callable):
+        return fn(self, [c.accumulate(fn) for c in reversed(self.children)])
+
     def to_smiles(self) -> str:
         r = ""
         for idx, child in enumerate(self.children):
@@ -59,7 +63,7 @@ class AstNode:
 class Ast:
     root: AstNode | None = None
     root_stack: list[AstNode] = field(default_factory=list)
-    last_connid: int = 0
+    last_closure_id: int = 0
 
     @staticmethod
     def from_atom(atom: Atom) -> Ast:
@@ -81,7 +85,9 @@ class Ast:
         node.append_child(rhs.root, bond)
         return self
 
-    def append_multiple(self, rhs_base: Ast, to: list[str] | None = None, bond: str = "-") -> Ast:
+    def append_multiple(
+        self, rhs_base: Ast, to: list[str] | None = None, bond: str = "-"
+    ) -> Ast:
         if rhs_base.root is None:
             return self
         nodes = [self.root] if to is None else self.find_multiple_labels(to)
@@ -137,7 +143,6 @@ class Ast:
             predecessor.children.remove(last)
             last.children.append(predecessor)
             predecessor.upbond, last_upbond = last_upbond, predecessor.upbond
-            # last.upbond, predecessor.upbond = predecessor.upbond, last.upbond
             last = predecessor
         self.root = node
         return self
@@ -152,11 +157,11 @@ class Ast:
             node.atom.label = ""
 
     def cyclize(self) -> Ast:
-        self.last_connid += 1
+        self.last_closure_id += 1
         one = self.root
         another = self.find(lambda x: x.atom.label == "1")
-        one.atom.add_conn(self.last_connid)
-        another.atom.add_conn(self.last_connid)
+        one.atom.add_closure(self.last_closure_id)
+        another.atom.add_closure(self.last_closure_id)
         return self
 
     def _rebase_to_farthest(self) -> None:

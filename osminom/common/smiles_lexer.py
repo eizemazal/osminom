@@ -2,16 +2,39 @@ import ply.lex as lex
 
 
 class SmilesLexer:
+    def __init__(self):
+        self.lexer = lex.lex(module=self)
+
     tokens = (
         "ELEM",
+        "LBRACKET",
+        "RBRACKET",
+        "BOND",
         "INT",
-        "MULBOND",
         "SLASH",
         "CHIRALITY",
+        "CHARGE",
+        "H",
     )
-    literals = "()[]+-H."
 
-    def t_CHIRALITY(self, t):
+    literals = "()%"
+    states = (("atom", "inclusive"),)
+
+    def t_atom_CHARGE(self, t):
+        r"(\+|\-)"
+        return t
+
+    def t_LBRACKET(self, t):
+        r"\["
+        t.lexer.push_state("atom")
+        return t
+
+    def t_atom_RBRACKET(self, t):
+        r"\]"
+        t.lexer.pop_state()
+        return t
+
+    def t_atom_CHIRALITY(self, t):
         r"(@@|@)"
         return t
 
@@ -19,28 +42,33 @@ class SmilesLexer:
         r"(/|\\)"
         return t
 
-    def t_MULBOND(self, t):
-        r"(=|\#)"
+    def t_BOND(self, t):
+        r"(-|=|\#|:)"
         return t
 
-    def t_INT(self, t):
+    def t_atom_H(self, t):
+        r"H"
+        return t
+
+    def t_ANY_INT(self, t):
         r"\d+"
-        t.value = t.value
+        t.value = int(t.value)
         return t
 
     def t_ELEM(self, t):
+        r"(Br|Cl|B|C|N|O|P|S|F|I|c|n|o|p|s)"
+        return t
+
+    def t_atom_ELEM(self, t):
         r"(He|Li|Be|Ne|Na|Mg|Al|Si|Cl|Ar|Ca|Sc|Ti|V|Cr|Mn|Fe|Co|Ni|Cu    \
             |Zn|Ga|Ge|As|Se|Br|Kr|Rb|Sr|Zr|Nb|Mo|Tc|Ru|Rh|Pd|Ag|Cd|In|Sn \
             |Sb|Te|Xe|Cs|Ba|La|Ce|Pr|Nd|Pm|Sm|Eu|Gd|Tb|Dy|Ho|Er|Tm|Yb|Lu \
             |Hf|Ta|W|Re|Os|Ir|Pt|Au|Hg|Tl|Pb|Bi|Po|At|Rn|Fr|Ra|Ac|Th|Pa  \
-            |Np|Pu|Am|Cm|Bk|Cf|Es|Fm|Md|No|Lr|U|P|S|K|Y|I|B|C|N|O|F|c|n)"
+            |Np|Pu|Am|Cm|Bk|Cf|Es|Fm|Md|No|Lr|U|P|S|K|Y|I|B|C|N|O|F|c|n|o|p|s)"
         return t
 
-    def t_error(self, _):
-        raise ValueError("Invalid token")
-
-    def __init__(self):
-        self.lexer = lex.lex(module=self)
+    def t_ANY_error(self, t):
+        raise ValueError(f"Invalid token: {t}")
 
     def input(self, data):
         return self.lexer.input(data)

@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
-from buftinom.algorythms import MolDecomposition
-from buftinom.translate import WordForm
+from osminom.structure2name.algorithms import MolDecomposition
+from osminom.structure2name.translate import WordForm
 
 
 def s(obj):

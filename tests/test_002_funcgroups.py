@@ -1,7 +1,7 @@
 import pytest
 
-from buftinom.funcgroups import acid_matcher, alco_matcher
-from buftinom.smiles_parser import SmilesParser
+from osminom.structure2name.funcgroups import acid_matcher, alco_matcher
+from osminom.structure2name.molecule import Molecule
 
 
 @pytest.mark.parametrize(
@@ -17,7 +17,7 @@ from buftinom.smiles_parser import SmilesParser
     ],
 )
 def test_alcohol(smiles, expected_nmatches):
-    (mol,) = SmilesParser().parse(smiles)
+    mol = Molecule.from_smiles(smiles)
     alcohol = alco_matcher(mol)
 
     nmatches = 0
@@ -44,7 +44,7 @@ def test_alcohol(smiles, expected_nmatches):
     ],
 )
 def test_acid(smiles, expected_nmatches):
-    (mol,) = SmilesParser().parse(smiles)
+    mol = Molecule.from_smiles(smiles)
     acid = acid_matcher(mol)
 
     nmatches = 0

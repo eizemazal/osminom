@@ -1,17 +1,17 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from buftinom.algorythms import (
+from osminom.structure2name.algorithms import (
     Chain,
     MolDecomposition,
     SubchainConnection,
     reversechain,
 )
-from buftinom.funcgroups import GroupMatch
-from buftinom.lookup import Alphabet, FunctionalGroup
-from buftinom.models import IupacName
-from buftinom.smileg import Atom, Bond, BondType, is_carbon
-from buftinom.utils import first_max, nonzero_indexes
+from osminom.structure2name.funcgroups import GroupMatch
+from osminom.structure2name.lookup import Alphabet, FunctionalGroup
+from osminom.structure2name.models import IupacName
+from osminom.structure2name.molecule import Atom, Bond, BondType
+from osminom.structure2name.utils import first_max, nonzero_indexes
 
 
 @dataclass
@@ -45,7 +45,7 @@ def feature_connected(feature: AtomFeatures):
 
 
 def feature_noncarbon(feature: AtomFeatures):
-    return int(not is_carbon(feature.atom))
+    return int(feature.atom.symbol.lower() != "c")
 
 
 def feature_bonds(feature: AtomFeatures):
@@ -140,7 +140,7 @@ class Features:
 
         non_carbons = 0
         for i, (a1, a2) in enumerate(zip(chain, chain[1:]), start=1):
-            if not is_carbon(a1) and not decomp.is_aromatic:
+            if a1.symbol.lower() != "c" and not decomp.is_aromatic:
                 non_carbons += 1
                 continue
 
@@ -191,7 +191,7 @@ class Features:
         """
         First Point of Difference
 
-        The algorythm to determine the Numbering of the chain.
+        The algorithm to determine the Numbering of the chain.
 
         Short rule is:
         1. Primary functional group is the king, it have the least number

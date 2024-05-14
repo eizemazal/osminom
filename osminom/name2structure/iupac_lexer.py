@@ -1,13 +1,26 @@
 import ply.lex as lex
-from osminom.ast import Ast
-from osminom.smiles_parser import SmilesParser as SP
+from osminom.common.ast import Ast
+from osminom.common.smiles_parser import SmilesParser as SP
 from copy import deepcopy
 
 
 aliphatic_roots = ["мет", "эт", "проп", "бут", "пент", "гекс", "гепт", "окт", "нон"]
 
 # This will need to be refactored to support compound numbers
-numeric_prefixes = ["моно", "ди", "три", "тетра", "пента", "гекса", "гепта", "окта", "нона", "дека", "ундека", "додека"]
+numeric_prefixes = [
+    "моно",
+    "ди",
+    "три",
+    "тетра",
+    "пента",
+    "гекса",
+    "гепта",
+    "окта",
+    "нона",
+    "дека",
+    "ундека",
+    "додека",
+]
 
 chains = {
     root: SP().parse("C" * (idx + 1)).label(range(1, idx + 2))

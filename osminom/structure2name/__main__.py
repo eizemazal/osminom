@@ -7,12 +7,18 @@
     python -m buftinom --help
     ```
 """
+
 import argparse
 from dataclasses import dataclass
 
-from buftinom import Iupac, SmilesParser, iupac2str
-from buftinom.smileg import debug_atoms
-from buftinom.translate import available_languages, get_os_lang, override_lang
+from osminom.common.smiles_parser import SmilesParser
+from osminom.structure2name import Iupac, iupac2str
+from osminom.structure2name.molecule import debug_atoms
+from osminom.structure2name.translate import (
+    available_languages,
+    get_os_lang,
+    override_lang,
+)
 
 
 @dataclass

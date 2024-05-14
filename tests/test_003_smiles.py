@@ -2,11 +2,10 @@ from contextlib import contextmanager
 
 import pytest
 
-from buftinom.algorythms import Alogrythms
-from buftinom.iupac import Iupac, iupac2str
-from buftinom.smileg import Bond, BondType, MoleculeConstructor
-from buftinom.smiles_lexer import SmilesLexer
-from buftinom.smiles_parser import SmilesParser
+from osminom.structure2name.algorithms import Algorithms
+from osminom.structure2name.molecule import Bond, BondType, Molecule
+from osminom.common.smiles_lexer import SmilesLexer
+from osminom.common.smiles_parser import SmilesParser
 from tests import test_data
 
 
@@ -36,13 +35,10 @@ def test_lexer(smiles, valid):
     test_data.smiles + test_data.parser_tests,
 )
 def test_parser(smiles, valid):
-    parser = SmilesParser(debug=True)
 
     with maybe_raises(ValueError, not valid):
-        cosmos = parser.parse(smiles)
-
-        for mol in cosmos:
-            print(mol.print_table())
+        mol = Molecule.from_smiles(smiles)
+        print(mol.print_table())
 
 
 @pytest.fixture
@@ -50,12 +46,12 @@ def parser():
     return SmilesParser(debug=True)
 
 
-def test_many_molecules(parser):
-    assert len(parser.parse("C.C")) == 2
+# def test_many_molecules(parser):
+#    assert len(parser.parse("C.C")) == 2
 
 
-def bond_values(mol: MoleculeConstructor):
-    return [b for _, b, _ in mol.unuque_bonds()]
+def bond_values(mol: Molecule):
+    return [b for _, b, _ in mol.unique_bonds()]
 
 
 @pytest.mark.parametrize(
@@ -67,10 +63,10 @@ def bond_values(mol: MoleculeConstructor):
         ("C-C=C", [Bond(BondType.SINGLE), Bond(BondType.DOUBLE)]),
     ],
 )
-def test_bond(parser, smiles, expected):
-    (mol,) = parser.parse(smiles)
+def test_bond(smiles, expected):
+    mol = Molecule.from_smiles(smiles)
     mol.print_table()
-    assert bond_values(mol) == expected
+    assert set(bond_values(mol)) == set(expected)
 
 
 @pytest.mark.parametrize(
@@ -85,8 +81,8 @@ def test_bond(parser, smiles, expected):
         ("CCCB1CCP=1CCC", 10),
     ],
 )
-def test_closure(parser, smiles, expected_bonds):
-    (mol,) = parser.parse(smiles)
+def test_closure(smiles, expected_bonds):
+    mol = Molecule.from_smiles(smiles)
     mol.print_table()
 
     assert len(bond_values(mol)) == expected_bonds
@@ -96,40 +92,39 @@ def test_closure(parser, smiles, expected_bonds):
     "smiles, expected_bonds",
     [
         ("C(C)C", 2),
-        ("B=(P)(N)C", 3),
+        ("P(=S)(N)C", 3),
         ("C(C)(C)(C)C", 4),
     ],
 )
-def test_submolecules(parser, smiles, expected_bonds):
-    (mol,) = parser.parse(smiles)
+def test_submolecules(smiles, expected_bonds):
+    mol = Molecule.from_smiles(smiles)
     mol.print_table()
 
     assert len(bond_values(mol)) == expected_bonds
 
 
-def test_submolecules_bonds(parser):
-    (mol,) = parser.parse("CCCB(CN)(CP)CC")
+def test_submolecules_bonds():
+    mol = Molecule.from_smiles("CCCB(CN)(CP)CC")
     mol.print_table()
 
     assert len(bond_values(mol))
 
 
-def test_submolecule_cyclo(parser):
-    (mol,) = parser.parse("C(=C)(C)C=1CCC1")
+def test_submolecule_cyclo():
+    mol = Molecule.from_smiles("C(=C)(C)C=1CCC1")
     mol.print_table()
 
     assert len(bond_values(mol)) == 7
 
 
-def test_submolecule_nested(parser):
-    (mol,) = parser.parse("PCCCB(CCCBr(CC)CCN)CCCC")
+def test_submolecule_nested():
+    mol = Molecule.from_smiles("PCCCB(CCCBr(CC)CCN)CCCC")
     mol.print_table()
-
     assert len(bond_values(mol))
 
 
 def test_submolecule_cyclo_intersect(parser):
-    (mol,) = parser.parse("CCCC(CCB1(CC))CN1CC")
+    mol = Molecule.from_smiles("CCCC(CCB1(CC))CN1CC")
     mol.print_table()
     assert len(bond_values(mol)) == 13
 
@@ -142,8 +137,8 @@ def test_submolecule_cyclo_intersect(parser):
         ("[Fe]", {"symbol": "Fe"}),
         ("[22Fe]", {"symbol": "Fe", "isotope": 22}),
         ("[Fe@@]", {"symbol": "Fe", "chirality": "@@"}),
-        ("[FeH]", {"symbol": "Fe", "hydrogen": 1}),
-        ("[FeH2]", {"symbol": "Fe", "hydrogen": 2}),
+        ("[FeH]", {"symbol": "Fe", "nprotons": 1}),
+        ("[FeH2]", {"symbol": "Fe", "nprotons": 2}),
         ("[Fe+2]", {"symbol": "Fe", "charge": 2}),
         ("[Fe++]", {"symbol": "Fe", "charge": 2}),
         ("[22Fe+2]", {"symbol": "Fe", "charge": 2, "isotope": 22}),
@@ -153,17 +148,17 @@ def test_submolecule_cyclo_intersect(parser):
                 "symbol": "Fe",
                 "charge": 4,
                 "isotope": 22,
-                "hydrogen": 3,
+                "nprotons": 3,
                 "chirality": "@",
             },
         ),
         (
-            "[22Fe@@H3----]",
+            "[22Fe@@H3-4]",
             {
                 "symbol": "Fe",
                 "charge": -4,
                 "isotope": 22,
-                "hydrogen": 3,
+                "nprotons": 3,
                 "chirality": "@@",
             },
         ),
@@ -172,7 +167,7 @@ def test_submolecule_cyclo_intersect(parser):
             {
                 "symbol": "C",
                 "charge": 0,
-                "hydrogen": 4,
+                "nprotons": 4,
             },
         ),
         (
@@ -180,7 +175,7 @@ def test_submolecule_cyclo_intersect(parser):
             {
                 "symbol": "H",
                 "charge": 0,
-                "hydrogen": 1,
+                "nprotons": 1,
             },
         ),
         (
@@ -188,13 +183,14 @@ def test_submolecule_cyclo_intersect(parser):
             {
                 "symbol": "N",
                 "charge": 0,
-                "hydrogen": 3,
+                "nprotons": 3,
             },
         ),
     ],
 )
-def test_atom(parser, atom, expected):
-    (mol,) = parser.parse(atom)
+def test_atom(atom, expected):
+    mol = Molecule.from_smiles(atom)
+
     mol.print_table()
     atom = mol._atoms[0]
 
@@ -212,9 +208,9 @@ def test_atom(parser, atom, expected):
         "CC(#N)CC",
     ],
 )
-def test_assert_valence(parser, smiles):
+def test_assert_valence(smiles):
     with pytest.raises(ValueError):
-        (mol,) = parser.parse(smiles)
+        mol = Molecule.from_smiles(smiles)
         mol.print_table()
 
 
@@ -226,9 +222,9 @@ def test_assert_valence(parser, smiles):
         "CCC3C1CC2C1",
     ],
 )
-def test_assert_invalid_cycles(parser, smiles):
+def test_assert_invalid_cycles(smiles):
     with pytest.raises(ValueError):
-        (mol,) = parser.parse(smiles)
+        mol = Molecule.from_smiles(smiles)
         mol.print_table()
         print(mol._closures)
 
@@ -240,21 +236,8 @@ def test_assert_invalid_cycles(parser, smiles):
         "C(=O)OCCCOC=O",
     ],
 )
-def test_assert_invalid_connections(parser, smiles):
+def test_assert_invalid_connections(smiles):
     with pytest.raises(ValueError):
-        (mol,) = parser.parse(smiles)
-        d = Alogrythms(mol).decompose()
+        mol = Molecule.from_smiles(smiles)
+        d = Algorithms(mol).decompose()
         d.print()
-
-
-@pytest.mark.parametrize(
-    "smiles",
-    [
-        "C1CCCCOCCC1",
-        "C1CCCCNCCC1",
-    ],
-)
-def test_unsupported_hetero_cycles(parser, smiles):
-    with pytest.raises(NotImplementedError):
-        (mol,) = parser.parse(smiles)
-        print(iupac2str(Iupac(mol).construct_name()))

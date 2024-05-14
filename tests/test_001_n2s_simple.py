@@ -1,4 +1,4 @@
-from osminom.iupac_parser import IupacParser
+from osminom.name2structure.iupac_parser import IupacParser
 import pytest
 
 # from osminom.iupac_lexer import IupacLexer
@@ -120,6 +120,7 @@ def test_multiprefixes(parser):
 
     mol = parser.parse("1-(2,2-ди(2,4-дигидроксифенил)винил)этанол")
     assert mol.smiles == "Oc(c1)cc(O)cc1C(=C)(C(O)C)c1cc(O)cc(c1)O"
+
 
 # def test_suffixes(parser):
 #    mol = parser.parse("метанол")

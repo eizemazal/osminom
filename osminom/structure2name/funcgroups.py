@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import NotRequired, TypedDict, Unpack
 
-from buftinom.lookup import FunctionalGroup
-from buftinom.smileg import Atom, Bond, BondSymbol, Molecule, is_not_carbon
+from osminom.structure2name.lookup import FunctionalGroup
+from osminom.structure2name.molecule import Atom, Bond, BondSymbol, Molecule
 
 
 class AtomParams(TypedDict):
@@ -11,7 +11,7 @@ class AtomParams(TypedDict):
 
     by: NotRequired[BondSymbol]
     symbol: str
-    hydrogen: int
+    nprotons: int
     charge: int
 
     #
@@ -33,7 +33,7 @@ class GroupParams(TypedDict):
 
 def structcmp(a1: Atom, a2: AtomParams):
     sym_eq = a1.symbol.lower() == a2["symbol"].lower()
-    h_eq = a1.hydrogen == a2.get("hydrogen", a1.hydrogen)
+    h_eq = a1.nprotons == a2.get("nprotons", a1.nprotons)
     charge_eq = a1.charge == a2.get("charge", a1.charge)
 
     return sym_eq and h_eq and charge_eq
@@ -76,7 +76,7 @@ class GroupMatch:
 
     @cached_property
     def func_atoms(self) -> set[Atom]:
-        return set(filter(is_not_carbon, self.atoms))
+        return set(filter(lambda x: x.symbol.lower() != "c", self.atoms))
 
     def change_root(self, new_root: Atom):
         if self.root_flexed is not None:
@@ -313,7 +313,7 @@ def ketone_matcher(mol: Molecule):
 
     return match.chain(
         match.atom(symbol="O", is_terminal=True),
-        match.atom(by="=", symbol="C", hydrogen=0, is_root=True),
+        match.atom(by="=", symbol="C", nprotons=0, is_root=True),
     )
 
 
@@ -323,7 +323,7 @@ def aldehyde_matcher(mol: Molecule):
 
     return match.chain(
         match.atom(symbol="O", is_terminal=True),
-        match.atom(by="=", symbol="C", hydrogen=1, is_root=True),
+        match.atom(by="=", symbol="C", nprotons=1, is_root=True),
         is_flex_root=True,
     )
 

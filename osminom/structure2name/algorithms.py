@@ -4,12 +4,12 @@ from dataclasses import dataclass
 from functools import cached_property, lru_cache, partial
 from typing import Generator, TypeAlias
 
-from buftinom.funcgroups import GroupMatch, get_matchers
-from buftinom.lookup import (
+from osminom.structure2name.funcgroups import GroupMatch, get_matchers
+from osminom.structure2name.lookup import (
     BOND_PRIORITY,
 )
-from buftinom.smileg import Atom, BondType, Molecule, is_carbon
-from buftinom.utils import deepmerge, filter_max
+from osminom.structure2name.molecule import Atom, BondType, Molecule
+from osminom.structure2name.utils import deepmerge, filter_max
 
 ChainKey: TypeAlias = tuple[Atom, Atom]
 Chain: TypeAlias = tuple[Atom, ...]
@@ -99,7 +99,7 @@ class MolDecomposition:
         )
 
 
-class Alogrythms:
+class Algorithms:
     """
     A class that represents algorithms for working with molecules.
 
@@ -178,7 +178,7 @@ class Alogrythms:
                 if match_atom_used:
                     continue
 
-                if is_carbon(mtch.root) and mtch.is_flex_root:
+                if mtch.root.symbol.lower() == "c" and mtch.is_flex_root:
                     if croot := self.on_cycle_border(mtch.root):
                         if len(croot) != 1:
                             raise NotImplementedError(
@@ -209,7 +209,7 @@ class Alogrythms:
                     atoms |= {group.root_flexed}
 
         nonfunc_atoms = set(self.mol.atoms) - atoms
-        noncarbon_func = list(filter(lambda a: not is_carbon(a), nonfunc_atoms))
+        noncarbon_func = list(filter(lambda a: a.symbol.lower() != "c", nonfunc_atoms))
         if noncarbon_func:
             raise NotImplementedError(
                 f"Atoms {noncarbon_func} is possibly a part of the"

@@ -1,14 +1,16 @@
 import pytest
 
-from buftinom.algorythms import Alogrythms, Chain, chainkey
-from buftinom.smileg import Atom, debug_atoms
-from buftinom.smiles_parser import SmilesParser
+from osminom.structure2name.algorithms import Algorithms, Chain, chainkey
+from osminom.structure2name.molecule import debug_atoms, Molecule
+from osminom.common.atom import Atom
+from osminom.common.smiles_parser import SmilesParser
 
 debug_atoms(True)
 
 
-def algorythms(smiles: str):
-    return Alogrythms(SmilesParser(debug=True).parse(smiles)[0])
+def algorithms(smiles: str):
+    ast = SmilesParser(debug=True).parse(smiles)
+    return Algorithms(Molecule.from_ast(ast))
 
 
 def a2s(*atoms: Atom):
@@ -31,16 +33,16 @@ def symkey(chain: Chain):
     ],
 )
 def test_leafs(smiles, expected_length):
-    assert len(algorythms(smiles).leafs) == expected_length
+    assert len(algorithms(smiles).leafs) == expected_length
 
 
 def test_table2list():
-    algo = algorythms("CCC")
+    algo = algorithms("CCC")
     a1 = algo.mol._atoms[0]
     a2 = algo.mol._atoms[1]
     a3 = algo.mol._atoms[2]
 
-    list = algo.mol.table2list()
+    list = algo.mol._adjacent_list()
 
     assert len(list[a1]) == 1
     assert len(list[a2]) == 2
@@ -48,7 +50,7 @@ def test_table2list():
 
 
 def test_leaf_distances():
-    algo = algorythms("CCCCC")
+    algo = algorithms("CCCCC")
     a1, a5 = algo.leafs
 
     d = algo.leaf_distances
@@ -57,7 +59,7 @@ def test_leaf_distances():
 
 
 def test_leaf_distances_tree():
-    algo = algorythms("CCC(CC)(CC)CC")
+    algo = algorithms("CCC(CC)(CC)CC")
 
     d = algo.leaf_distances
 
@@ -76,7 +78,7 @@ def test_leaf_distances_tree():
     ],
 )
 def test_max_chain(smiles, expected_len):
-    algo = algorythms(smiles)
+    algo = algorithms(smiles)
 
     chain = algo.max_chain(algo.all_chains)
 
@@ -84,7 +86,7 @@ def test_max_chain(smiles, expected_len):
 
 
 def test_stipchains():
-    algo = algorythms("CCCC(CC)CCCC")
+    algo = algorithms("CCCC(CC)CCCC")
     chain = algo.max_chain(algo.all_chains)
 
     subchains = algo.stripchains(algo.all_chains, chain)
@@ -93,7 +95,7 @@ def test_stipchains():
 
 
 def test_stipchains_many():
-    algo = algorythms("CCCCCCCC(C(C)CC)C(C(C)CC)CCCCCCC")
+    algo = algorithms("CCCCCCCC(C(C)CC)C(C(C)CC)CCCCCCC")
     chain = algo.max_chain(algo.all_chains)
 
     subchains = algo.stripchains(algo.all_chains, chain)
@@ -110,7 +112,7 @@ def test_stipchains_many():
     ],
 )
 def test_decompose(smiles):
-    algo = algorythms(smiles)
+    algo = algorithms(smiles)
 
     main = algo.decompose()
     main.print()
@@ -119,7 +121,7 @@ def test_decompose(smiles):
 
 
 def test_decompose_multiple_connections():
-    algo = algorythms("CCC(C)(C)CC")
+    algo = algorithms("CCC(C)(C)CC")
 
     algo.mol.print_table()
 
@@ -128,7 +130,7 @@ def test_decompose_multiple_connections():
 
 
 def test_decompose_multiple_tree_connections():
-    algo = algorythms("CCCCC(C(C)C(C)C)(C(C)C(C)C)CCCC")
+    algo = algorithms("CCCCC(C(C)C(C)C)(C(C)C(C)C)CCCC")
 
     main = algo.decompose()
     main.print()
@@ -153,7 +155,7 @@ def test_decompose_multiple_tree_connections():
 )
 def test_cycle(smiles, start, expected_len):
     debug_atoms(True)
-    algo = algorythms(smiles)
+    algo = algorithms(smiles)
     cycle = algo.shortest_cycle(algo.mol.adj, algo.mol.atom(start))
     print(cycle)
     assert len(cycle) == expected_len, cycle
@@ -170,7 +172,7 @@ def test_cycle(smiles, start, expected_len):
 )
 def test_cycles(smiles, expected_len):
     debug_atoms(True)
-    algo = algorythms(smiles)
+    algo = algorithms(smiles)
     cycles = algo.cycles
 
     assert len(cycles) == expected_len
@@ -186,7 +188,7 @@ def test_cycles(smiles, expected_len):
 )
 def test_decompose_cycles(smiles):
     debug_atoms(True)
-    algo = algorythms(smiles)
+    algo = algorithms(smiles)
     dec = algo.decompose()
 
     dec.print()
@@ -203,7 +205,7 @@ def test_decompose_cycles(smiles):
 )
 def test_functional_groups(smiles, count):
     debug_atoms(True)
-    algo = algorythms(smiles)
+    algo = algorithms(smiles)
     groups = algo.functional_groups
 
     for g in groups.items():
@@ -222,7 +224,7 @@ def test_functional_groups(smiles, count):
 )
 def test_one_functional_group_decompostion(smiles, count):
     debug_atoms(True)
-    algo = algorythms(smiles)
+    algo = algorithms(smiles)
     dec = algo.decompose()
 
     dec.print()

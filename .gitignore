@@ -7,3 +7,5 @@ venv
 pyrightconfig.json
 .vscode
 pyproject.toml
+.pytest_cache
+.DS_Store

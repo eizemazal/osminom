@@ -1,7 +1,7 @@
 from enum import Enum
 
-from buftinom.smileg import Bond, BondType
-from buftinom.translate import translate as _
+from osminom.structure2name.molecule import Bond, BondType
+from osminom.structure2name.translate import translate as _
 
 
 class RootWord(Enum):

@@ -1,14 +1,14 @@
 from collections import Counter, defaultdict, deque
 from functools import cached_property
 
-from buftinom.algorythms import (
-    Alogrythms,
+from osminom.structure2name.algorithms import (
+    Algorithms,
     MolDecomposition,
     SubchainConnection,
 )
-from buftinom.features import AtomFeatures, Features, f2c
-from buftinom.funcgroups import GroupMatch
-from buftinom.lookup import (
+from osminom.structure2name.features import AtomFeatures, Features, f2c
+from osminom.structure2name.funcgroups import GroupMatch
+from osminom.structure2name.lookup import (
     MULTI_BY_PREFIX,
     MULTI_MULTI_BY_PREFIX,
     ROOT_BY_LENGTH,
@@ -23,9 +23,9 @@ from buftinom.lookup import (
     is_preffix_in_arimatic,
     provides_split,
 )
-from buftinom.models import IupacName, Subn, Synt
-from buftinom.smileg import Atom, BondType, Molecule, is_carbon
-from buftinom.translate import WordForm, WordFormName
+from osminom.structure2name.models import IupacName, Subn, Synt
+from osminom.structure2name.molecule import Atom, BondType, Molecule
+from osminom.structure2name.translate import WordForm, WordFormName
 
 
 def s(obj):
@@ -219,7 +219,7 @@ def iupac2str(iupac: IupacName) -> str:
 class Iupac:
     """
     Build Iupac structured representation of the molecule.
-    Uses Algorythms class to create decomposition and give names to decomposed parts
+    Uses Algorithms class to create decomposition and give names to decomposed parts
     """
 
     def __init__(self, mol: Molecule):
@@ -227,7 +227,7 @@ class Iupac:
 
     @cached_property
     def alg(self):
-        return Alogrythms(self.mol)
+        return Algorithms(self.mol)
 
     @cached_property
     def decomposition(self):
@@ -434,7 +434,7 @@ class Iupac:
             return self.aromatic_root(decomp)
 
         if decomp.is_cycle:
-            if not all(is_carbon(a) for a in decomp.chain):
+            if any(a.symbol.lower() != "c" for a in decomp.chain):
                 raise NotImplementedError("Hetero cycles are not supported")
 
         return ROOT_BY_LENGTH[len(features)].value

@@ -1,5 +1,5 @@
 import ply.yacc as yacc
-from osminom.iupac_lexer import IupacLexer
+from osminom.name2structure.iupac_lexer import IupacLexer
 
 
 class IupacParser:
@@ -72,7 +72,7 @@ class IupacParser:
 
     def p_llocant_dash_numprfx(self, p):
         """llocant : INT DASH NUMPRFXFORM
-                   | INT DASH"""
+        | INT DASH"""
         p[0] = [int(p[1])]
 
     def p_error(self, p):

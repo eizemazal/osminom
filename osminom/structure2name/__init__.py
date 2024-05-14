@@ -1,7 +1,7 @@
-from buftinom.algorythms import Alogrythms
-from buftinom.iupac import Iupac, IupacName, iupac2str
-from buftinom.smileg import Molecule
-from buftinom.smiles_parser import SmilesParser
+from osminom.structure2name.algorithms import Algorithms
+from osminom.structure2name.iupac import Iupac, IupacName, iupac2str
+from osminom.structure2name.molecule import Molecule
+from osminom.common.smiles_parser import SmilesParser
 
 
 def _print_debug(iupac: Iupac, iupac_name: IupacName):
@@ -52,7 +52,7 @@ def smiles2iupac1(smiles: str, *, debug: bool = False) -> str:
 __all__ = [
     "Molecule",
     "SmilesParser",
-    "Alogrythms",
+    "Algorithms",
     "Iupac",
     "IupacName",
     "iupac2str",
